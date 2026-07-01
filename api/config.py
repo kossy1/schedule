@@ -6,10 +6,7 @@ if os.path.exists('.env'):
     load_dotenv()
 
 class Config:
-    # JWT Secret Key
-    SECRET_KEY = os.getenv('SECRET_KEY')
-    
-    # MongoDB
+    SECRET_KEY = os.getenv('SECRET_KEY', 'your-super-secret-key-change-in-production')
     MONGODB_URI = os.getenv('MONGODB_URI')
     DB_NAME = os.getenv('DB_NAME', 'polytechnic_scheduler')
     

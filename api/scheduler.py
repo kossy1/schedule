@@ -17,7 +17,8 @@ class GeneticScheduler:
         for course in self.courses:
             schedule.append({
                 "course": course["id"],
-                "lecturer": course["lecturer"],
+                "course_name": course.get("name", ""),
+                "lecturer": course.get("lecturer", "Unknown"),
                 "day": random.choice(self.days),
                 "time": random.choice(self.slots),
                 "venue": random.choice(self.rooms)
@@ -25,7 +26,10 @@ class GeneticScheduler:
         return schedule
 
     def fitness(self, schedule: List[Dict]) -> float:
-        """Calculate fitness score."""
+        """
+        Calculate fitness score.
+        Higher score = better schedule.
+        """
         penalties = 0
         lecturer_schedule = {}
         room_schedule = {}
@@ -44,7 +48,7 @@ class GeneticScheduler:
                 penalties += 10
             room_schedule[room_key] = True
         
-        return max(0, 100 - penalties)  # Max fitness = 100
+        return max(0, 100 - penalties)
 
     def crossover(self, parent1: List[Dict], parent2: List[Dict]) -> List[Dict]:
         """Single-point crossover."""
@@ -66,7 +70,7 @@ class GeneticScheduler:
         # Initialize population
         population = [self.create_individual() for _ in range(self.population_size)]
         
-        for generation in range(self.generations):
+        for _ in range(self.generations):
             # Calculate fitness for all individuals
             fitness_scores = [self.fitness(ind) for ind in population]
             

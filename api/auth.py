@@ -3,12 +3,12 @@ import hmac
 import secrets
 from datetime import datetime, timedelta
 import jwt
-from flask import request, jsonify, current_app
+from flask import request, jsonify
 from functools import wraps
 from .database import db
+from .config import Config
 
-# Secret key for JWT (use environment variable in production)
-SECRET_KEY = "your-super-secret-key-change-this-in-production"
+SECRET_KEY = Config.SECRET_KEY
 
 def hash_password(password: str) -> str:
     """Hash password using SHA-256 with salt."""
@@ -18,9 +18,12 @@ def hash_password(password: str) -> str:
 
 def verify_password(password: str, hashed: str) -> bool:
     """Verify password against hashed version."""
-    salt, hash_value = hashed.split(":")
-    hash_obj = hashlib.sha256((salt + password).encode())
-    return hmac.compare_digest(hash_obj.hexdigest(), hash_value)
+    try:
+        salt, hash_value = hashed.split(":")
+        hash_obj = hashlib.sha256((salt + password).encode())
+        return hmac.compare_digest(hash_obj.hexdigest(), hash_value)
+    except:
+        return False
 
 def generate_token(user_id: str, username: str) -> str:
     """Generate JWT token."""
@@ -36,9 +39,7 @@ def verify_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
         return payload
-    except jwt.ExpiredSignatureError:
-        return None
-    except jwt.InvalidTokenError:
+    except:
         return None
 
 def token_required(f):
@@ -50,7 +51,6 @@ def token_required(f):
         if not token:
             return jsonify({'error': 'Token is missing'}), 401
         
-        # Remove 'Bearer ' prefix if present
         if token.startswith('Bearer '):
             token = token[7:]
         
@@ -63,13 +63,20 @@ def token_required(f):
 
 def init_admin_user():
     """Create default admin user if none exists."""
-    admin = db.users.find_one({'username': 'admin'})
-    if not admin:
-        hashed = hash_password('admin123')
-        db.users.insert_one({
-            'username': 'admin',
-            'password': hashed,
-            'role': 'admin',
-            'created_at': datetime.utcnow()
-        })
-        print("✅ Default admin created: username='admin', password='admin123'")
+    try:
+        if db:
+            admin = db.users.find_one({'username': 'admin'})
+            if not admin:
+                hashed = hash_password('admin123')
+                db.users.insert_one({
+                    'username': 'admin',
+                    'password': hashed,
+                    'role': 'admin',
+                    'created_at': datetime.utcnow().isoformat()
+                })
+                print("✅ Default admin created: username='admin', password='admin123'")
+                return True
+        return False
+    except Exception as e:
+        print(f"⚠️ Could not initialize admin: {e}")
+        return False
