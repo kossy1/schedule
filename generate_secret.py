@@ -1,16 +1,31 @@
-# generate_secret.py
 import secrets
-import uuid
-
-# Method 1: Hex string (64 characters)
-secret_key_hex = secrets.token_hex(32)
-print(f"Hex key: {secret_key_hex}")
-
-# Method 2: Combined UUIDs
-secret_key_uuid = str(uuid.uuid4()) + str(uuid.uuid4())
-print(f"UUID key: {secret_key_uuid}")
-
-# Method 3: URL-safe base64
 import base64
-secret_key_b64 = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
-print(f"Base64 key: {secret_key_b64}")
+import uuid
+from datetime import datetime
+
+print("=" * 60)
+print("🔑 SECRET KEY GENERATOR")
+print("=" * 60)
+print()
+
+# 1. For JWT Authentication (What you need)
+jwt_key = secrets.token_hex(32)
+print("📌 JWT SECRET KEY (Use this for your Flask app):")
+print(f"SECRET_KEY={jwt_key}")
+print()
+
+# 2. Alternative format
+jwt_key_b64 = base64.urlsafe_b64encode(secrets.token_bytes(32)).decode()
+print("📌 JWT SECRET KEY (Base64 format):")
+print(f"SECRET_KEY={jwt_key_b64}")
+print()
+
+# 3. For Stripe (Only if using Stripe)
+print("📌 STRIPE KEYS (Only if using Stripe payments):")
+print("⚠️  Stripe keys must be obtained from Stripe Dashboard")
+print("🔗 https://dashboard.stripe.com/apikeys")
+print()
+
+print("=" * 60)
+print("✅ Generated on:", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+print("=" * 60)
