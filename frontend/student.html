@@ -1,0 +1,929 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+    <title>Student Timetable - The Polytechnic Ibadan</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #1a3a5c;
+            --primary-light: #2a5a8c;
+            --secondary: #e6b31e;
+            --success: #28a745;
+            --danger: #dc3545;
+            --warning: #ffc107;
+            --info: #17a2b8;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            min-height: 100vh;
+        }
+        
+        /* Login Page */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            padding: 20px;
+        }
+        
+        .login-box {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease;
+        }
+        
+        .login-box .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-box .logo i {
+            font-size: 3rem;
+            color: var(--secondary);
+            background: var(--primary);
+            padding: 20px;
+            border-radius: 50%;
+        }
+        
+        .login-box .logo h3 {
+            margin-top: 15px;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        
+        .login-box .logo p {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .login-box .form-control {
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .login-box .form-control:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(230, 179, 30, 0.2);
+        }
+        
+        .login-box .btn-login {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        
+        .login-box .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(26, 58, 92, 0.3);
+        }
+        
+        .login-box .role-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .login-box .role-selector .btn-role {
+            flex: 1;
+            padding: 10px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            background: white;
+            transition: all 0.3s;
+            cursor: pointer;
+            text-align: center;
+        }
+        
+        .login-box .role-selector .btn-role.active {
+            border-color: var(--secondary);
+            background: rgba(230, 179, 30, 0.1);
+        }
+        
+        .login-box .role-selector .btn-role:hover {
+            border-color: var(--secondary);
+        }
+        
+        .login-box .role-selector .btn-role i {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Dashboard */
+        .dashboard-container {
+            display: none;
+        }
+        
+        /* Navbar */
+        .navbar-custom {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light)) !important;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            padding: 12px 0;
+        }
+        
+        .navbar-custom .navbar-brand {
+            color: var(--secondary) !important;
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+        
+        .navbar-custom .navbar-brand i {
+            margin-right: 10px;
+            color: white;
+        }
+        
+        .navbar-custom .navbar-brand small {
+            display: block;
+            font-size: 0.65rem;
+            color: rgba(255,255,255,0.8) !important;
+            font-weight: 400;
+        }
+        
+        .navbar-custom .user-badge {
+            background: rgba(255,255,255,0.15);
+            padding: 6px 16px;
+            border-radius: 25px;
+            color: white;
+            font-size: 0.85rem;
+        }
+        
+        .navbar-custom .user-badge i {
+            margin-right: 8px;
+        }
+        
+        /* Hero Section */
+        .hero-section {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            padding: 20px 0 25px;
+            border-radius: 0 0 30px 30px;
+            margin-bottom: 25px;
+        }
+        
+        .hero-section h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+        
+        .hero-section p {
+            font-size: 0.9rem;
+            opacity: 0.9;
+            margin: 0;
+        }
+        
+        /* Timetable Cards */
+        .timetable-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        .day-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            border-left: 4px solid var(--secondary);
+            transition: all 0.3s;
+        }
+        
+        .day-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+        }
+        
+        .day-card .day-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #f0f2f5;
+        }
+        
+        .day-card .day-header h6 {
+            margin: 0;
+            color: var(--primary);
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        
+        .day-card .day-header .badge {
+            font-size: 0.7rem;
+            padding: 4px 12px;
+        }
+        
+        .day-card .session-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 12px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            margin-bottom: 8px;
+            transition: all 0.3s;
+        }
+        
+        .day-card .session-item:hover {
+            background: #e9ecef;
+        }
+        
+        .day-card .session-item .time-slot {
+            min-width: 70px;
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 0.85rem;
+        }
+        
+        .day-card .session-item .session-details {
+            flex: 1;
+            padding: 0 12px;
+        }
+        
+        .day-card .session-item .session-details .course-name {
+            font-weight: 600;
+            color: #2d3748;
+            font-size: 0.95rem;
+        }
+        
+        .day-card .session-item .session-details .course-code {
+            font-size: 0.75rem;
+            color: #718096;
+            background: rgba(26, 58, 92, 0.08);
+            padding: 1px 10px;
+            border-radius: 12px;
+            display: inline-block;
+        }
+        
+        .day-card .session-item .session-details .lecturer-name {
+            font-size: 0.8rem;
+            color: #718096;
+        }
+        
+        .day-card .session-item .session-details .lecturer-name i {
+            margin-right: 4px;
+            color: var(--primary);
+        }
+        
+        .day-card .session-item .venue-badge {
+            background: var(--secondary);
+            color: var(--primary);
+            padding: 3px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #a0aec0;
+        }
+        
+        .empty-state i {
+            font-size: 4rem;
+            margin-bottom: 20px;
+            color: #e2e8f0;
+            display: block;
+        }
+        
+        .empty-state h5 {
+            color: #4a5568;
+            margin-bottom: 10px;
+        }
+        
+        /* Today Highlight */
+        .today-badge {
+            background: var(--success);
+            color: white;
+            font-size: 0.6rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            margin-left: 8px;
+        }
+        
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .toast {
+            border-radius: 12px;
+            border: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+        }
+        
+        .toast .toast-body {
+            padding: 12px 18px;
+            font-weight: 500;
+        }
+        
+        /* Loading */
+        .loading-spinner {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .loading-spinner .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: var(--primary);
+        }
+        
+        /* Print Styles */
+        @media print {
+            .navbar-custom, .hero-section, .btn, .no-print {
+                display: none !important;
+            }
+            .day-card {
+                break-inside: avoid;
+                box-shadow: none !important;
+                border: 1px solid #ddd !important;
+            }
+            body {
+                background: white !important;
+            }
+            .timetable-container {
+                padding: 0 !important;
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .day-card .session-item {
+                flex-wrap: wrap;
+                gap: 5px;
+            }
+            
+            .day-card .session-item .time-slot {
+                min-width: 60px;
+                font-size: 0.8rem;
+            }
+            
+            .day-card .session-item .session-details .course-name {
+                font-size: 0.85rem;
+            }
+            
+            .day-card .session-item .venue-badge {
+                font-size: 0.65rem;
+                padding: 2px 10px;
+            }
+            
+            .login-box {
+                padding: 25px;
+            }
+            
+            .hero-section h1 {
+                font-size: 1.2rem;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .day-card {
+                padding: 12px;
+            }
+            
+            .day-card .session-item {
+                padding: 8px 10px;
+            }
+            
+            .day-card .session-item .session-details {
+                padding: 0 8px;
+            }
+            
+            .day-card .session-item .time-slot {
+                min-width: 50px;
+                font-size: 0.7rem;
+            }
+            
+            .navbar-custom .navbar-brand {
+                font-size: 0.95rem;
+            }
+        }
+        
+        /* Animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .day-card {
+            animation: fadeInUp 0.4s ease forwards;
+        }
+        
+        .day-card:nth-child(2) { animation-delay: 0.05s; }
+        .day-card:nth-child(3) { animation-delay: 0.1s; }
+        .day-card:nth-child(4) { animation-delay: 0.15s; }
+        .day-card:nth-child(5) { animation-delay: 0.2s; }
+    </style>
+</head>
+<body>
+
+<!-- ========== LOGIN PAGE ========== -->
+<div id="loginPage" class="login-container">
+    <div class="login-box">
+        <div class="logo">
+            <i class="fas fa-user-graduate"></i>
+            <h3>Timetable Portal</h3>
+            <p>The Polytechnic, Ibadan</p>
+        </div>
+        
+        <div class="role-selector">
+            <div class="btn-role active" data-role="student" onclick="selectRole('student')">
+                <i class="fas fa-user-graduate"></i>
+                Student
+            </div>
+            <div class="btn-role" data-role="lecturer" onclick="selectRole('lecturer')">
+                <i class="fas fa-chalkboard-teacher"></i>
+                Lecturer
+            </div>
+        </div>
+        
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="mb-3">
+                <label class="form-label fw-semibold" id="loginLabel">Registration Number</label>
+                <input type="text" class="form-control" id="loginId" placeholder="e.g., HND/CS/2020/001" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Password</label>
+                <input type="password" class="form-control" id="loginPassword" placeholder="Enter your password" required>
+            </div>
+            <button type="submit" class="btn-login" id="loginBtn">
+                <i class="fas fa-sign-in-alt me-2"></i>View Timetable
+            </button>
+            <div class="text-center mt-3">
+                <small class="text-muted" id="loginHint">Use your registration number to login</small>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========== DASHBOARD ========== -->
+<div id="dashboardPage" class="dashboard-container">
+    <!-- Navbar -->
+    <nav class="navbar navbar-custom navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-university"></i>
+                The Polytechnic, Ibadan
+                <small>Timetable Viewer</small>
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <span class="user-badge d-none d-sm-inline-block" id="userBadge">
+                    <i class="fas fa-user"></i> <span id="userName">Student</span>
+                </span>
+                <button class="btn btn-sm btn-outline-light" onclick="handleLogout()">
+                    <i class="fas fa-sign-out-alt"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <div class="container">
+            <h1><i class="fas fa-calendar-alt me-2"></i>My Timetable</h1>
+            <p id="heroSubtitle">View your class schedule for the current semester</p>
+        </div>
+    </div>
+    
+    <!-- Timetable -->
+    <div class="timetable-container">
+        <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+            <div>
+                <span class="badge bg-primary" id="sessionCount">0 sessions</span>
+                <span class="badge bg-secondary ms-2" id="currentSemester">Semester 1</span>
+            </div>
+            <div class="no-print">
+                <button class="btn btn-sm btn-outline-primary" onclick="window.print()">
+                    <i class="fas fa-print me-1"></i> Print
+                </button>
+                <button class="btn btn-sm btn-outline-secondary ms-1" onclick="loadTimetable()">
+                    <i class="fas fa-sync-alt me-1"></i> Refresh
+                </button>
+            </div>
+        </div>
+        
+        <div id="timetableDisplay">
+            <div class="loading-spinner">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading your timetable...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container">
+    <div id="toastMessage" class="toast align-items-center text-white bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastBody">Success!</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ========================================================
+    // CONFIGURATION
+    // ========================================================
+    const API_URL = (() => {
+        const hostname = window.location.hostname;
+        if (hostname === 'localhost' || hostname === '127.0.0.1') {
+            return 'http://localhost:5000/api';
+        }
+        return '/api';
+    })();
+    
+    let selectedRole = 'student';
+    let userData = null;
+    let toast = null;
+    
+    // ========================================================
+    // INITIALIZATION
+    // ========================================================
+    document.addEventListener('DOMContentLoaded', function() {
+        const toastEl = document.getElementById('toastMessage');
+        if (toastEl) {
+            toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        }
+        
+        // Check if already logged in
+        const savedData = localStorage.getItem('timetableUser');
+        if (savedData) {
+            try {
+                userData = JSON.parse(savedData);
+                if (userData) {
+                    showDashboard();
+                    loadTimetable();
+                }
+            } catch (e) {
+                localStorage.removeItem('timetableUser');
+            }
+        }
+    });
+    
+    // ========================================================
+    // ROLE SELECTION
+    // ========================================================
+    function selectRole(role) {
+        selectedRole = role;
+        document.querySelectorAll('.btn-role').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.btn-role[data-role="${role}"]`).classList.add('active');
+        
+        const label = document.getElementById('loginLabel');
+        const hint = document.getElementById('loginHint');
+        const placeholder = document.getElementById('loginId');
+        
+        if (role === 'student') {
+            label.textContent = 'Registration Number';
+            placeholder.placeholder = 'e.g., HND/CS/2020/001';
+            hint.textContent = 'Enter your registration number to view your timetable';
+        } else {
+            label.textContent = 'Staff ID';
+            placeholder.placeholder = 'e.g., LEC-001';
+            hint.textContent = 'Enter your staff ID to view your timetable';
+        }
+    }
+    
+    // ========================================================
+    // AUTHENTICATION
+    // ========================================================
+    async function handleLogin(e) {
+        e.preventDefault();
+        const id = document.getElementById('loginId').value.trim();
+        const password = document.getElementById('loginPassword').value.trim();
+        const btn = document.getElementById('loginBtn');
+        
+        if (!id || !password) {
+            showToast('Please enter your credentials', 'warning');
+            return;
+        }
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
+        
+        try {
+            // For demo purposes, we'll simulate login
+            // In production, this would call the API
+            const data = {
+                id: id,
+                role: selectedRole,
+                name: selectedRole === 'student' ? 'Student User' : 'Dr. Lecturer',
+                department: 'Computer Science',
+                semester: 1
+            };
+            
+            userData = data;
+            localStorage.setItem('timetableUser', JSON.stringify(data));
+            
+            showToast(`✅ Welcome ${data.name}!`, 'success');
+            showDashboard();
+            loadTimetable();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>View Timetable';
+        }
+    }
+    
+    function showDashboard() {
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboardPage').style.display = 'block';
+        
+        if (userData) {
+            document.getElementById('userName').textContent = userData.name || 'User';
+            document.getElementById('heroSubtitle').textContent = 
+                `${selectedRole === 'student' ? 'Student' : 'Lecturer'}: ${userData.name} • ${userData.department || 'Computer Science'}`;
+        }
+    }
+    
+    function handleLogout() {
+        localStorage.removeItem('timetableUser');
+        userData = null;
+        document.getElementById('loginPage').style.display = 'flex';
+        document.getElementById('dashboardPage').style.display = 'none';
+        document.getElementById('loginId').value = '';
+        document.getElementById('loginPassword').value = '';
+        showToast('👋 Logged out', 'info');
+    }
+    
+    // ========================================================
+    // TOAST
+    // ========================================================
+    function showToast(message, type = 'success') {
+        const toastEl = document.getElementById('toastMessage');
+        const toastBody = document.getElementById('toastBody');
+        
+        if (!toastEl) return;
+        
+        const bgColors = {
+            success: 'bg-success',
+            danger: 'bg-danger',
+            warning: 'bg-warning text-dark',
+            info: 'bg-info text-dark'
+        };
+        
+        toastEl.className = `toast align-items-center text-white border-0 ${bgColors[type] || 'bg-success'}`;
+        toastBody.textContent = message;
+        
+        if (!toast) {
+            toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+        }
+        toast.show();
+    }
+    
+    // ========================================================
+    // TIMETABLE
+    // ========================================================
+    async function loadTimetable() {
+        const display = document.getElementById('timetableDisplay');
+        display.innerHTML = `
+            <div class="loading-spinner">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading your timetable...</p>
+            </div>
+        `;
+        
+        try {
+            // In production, call API with user ID
+            // const response = await fetch(`${API_URL}/timetable/student/${userData.id}`);
+            // const data = await response.json();
+            
+            // For demo, generate sample timetable
+            const data = generateSampleTimetable();
+            
+            if (!data || data.length === 0) {
+                display.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-calendar-times"></i>
+                        <h5>No Timetable Found</h5>
+                        <p>Your timetable has not been generated yet.</p>
+                        <small class="text-muted">Please contact the admin for assistance.</small>
+                    </div>
+                `;
+                return;
+            }
+            
+            displayTimetable(data);
+            
+        } catch (error) {
+            display.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-exclamation-triangle text-danger"></i>
+                    <h5>Error Loading Timetable</h5>
+                    <p>${error.message}</p>
+                    <button class="btn btn-primary mt-3" onclick="loadTimetable()">
+                        <i class="fas fa-sync-alt me-1"></i> Try Again
+                    </button>
+                </div>
+            `;
+        }
+    }
+    
+    function displayTimetable(schedule) {
+        const display = document.getElementById('timetableDisplay');
+        
+        // Group by day
+        const grouped = schedule.reduce((acc, item) => {
+            const day = item.day || 'Unknown';
+            if (!acc[day]) acc[day] = [];
+            acc[day].push(item);
+            return acc;
+        }, {});
+        
+        // Get today
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'long' });
+        
+        const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        let totalSessions = 0;
+        
+        let html = '';
+        
+        for (const day of daysOrder) {
+            if (grouped[day] && grouped[day].length > 0) {
+                const items = grouped[day];
+                totalSessions += items.length;
+                const isToday = day === today;
+                
+                html += `
+                    <div class="day-card" style="border-left-color: ${isToday ? '#28a745' : '#e6b31e'}">
+                        <div class="day-header">
+                            <h6>
+                                ${isToday ? '<i class="fas fa-calendar-check text-success me-1"></i>' : ''}
+                                ${day}
+                                ${isToday ? '<span class="today-badge">Today</span>' : ''}
+                            </h6>
+                            <span class="badge bg-secondary">${items.length} sessions</span>
+                        </div>
+                `;
+                
+                items.sort((a, b) => a.time.localeCompare(b.time));
+                
+                for (const item of items) {
+                    html += `
+                        <div class="session-item">
+                            <span class="time-slot">${item.time}</span>
+                            <div class="session-details">
+                                <div>
+                                    <span class="course-name">${item.course}</span>
+                                    ${item.course_code ? `<span class="course-code">${item.course_code}</span>` : ''}
+                                </div>
+                                <div>
+                                    <span class="lecturer-name">
+                                        <i class="fas fa-user"></i> ${item.lecturer || 'TBA'}
+                                    </span>
+                                </div>
+                            </div>
+                            <span class="venue-badge">
+                                <i class="fas fa-map-pin me-1"></i>${item.venue || 'TBA'}
+                            </span>
+                        </div>
+                    `;
+                }
+                
+                html += '</div>';
+            }
+        }
+        
+        // Update session count
+        document.getElementById('sessionCount').textContent = `${totalSessions} sessions`;
+        
+        if (totalSessions === 0) {
+            html = `
+                <div class="empty-state">
+                    <i class="fas fa-calendar-alt"></i>
+                    <h5>No Sessions Scheduled</h5>
+                    <p>You have no classes for this semester.</p>
+                </div>
+            `;
+        }
+        
+        display.innerHTML = html;
+    }
+    
+    // ========================================================
+    // SAMPLE DATA GENERATOR (For Demo)
+    // ========================================================
+    function generateSampleTimetable() {
+        const courses = [
+            { code: 'CSC101', name: 'Introduction to Programming', lecturer: 'Dr. Adebayo' },
+            { code: 'MTH201', name: 'Mathematics II', lecturer: 'Prof. Okafor' },
+            { code: 'PHY102', name: 'General Physics', lecturer: 'Dr. Eze' },
+            { code: 'ENG101', name: 'English Communication', lecturer: 'Mrs. Bello' },
+            { code: 'CSC102', name: 'Data Structures', lecturer: 'Dr. Adebayo' },
+            { code: 'MTH101', name: 'Mathematics I', lecturer: 'Prof. Okafor' },
+            { code: 'PHY101', name: 'Mechanics', lecturer: 'Dr. Eze' },
+            { code: 'CHE101', name: 'General Chemistry', lecturer: 'Dr. Musa' }
+        ];
+        
+        const venues = ['Room A-101', 'Room B-202', 'Lab C-301', 'Hall D-001', 'Room E-102'];
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const timeSlots = ['8-9', '9-10', '10-11', '11-12', '12-1', '2-3', '3-4', '4-5'];
+        
+        const schedule = [];
+        let slotIndex = 0;
+        
+        // If user is lecturer, filter courses by lecturer
+        const isLecturer = selectedRole === 'lecturer';
+        const lecturerName = userData?.name || '';
+        
+        const filteredCourses = isLecturer 
+            ? courses.filter(c => c.lecturer === lecturerName || c.lecturer.includes('Dr.'))
+            : courses;
+        
+        // Take first 6 courses for demo
+        const selectedCourses = filteredCourses.slice(0, 6);
+        
+        for (let i = 0; i < selectedCourses.length; i++) {
+            const course = selectedCourses[i];
+            const day = days[i % days.length];
+            const time = timeSlots[i % timeSlots.length];
+            const venue = venues[i % venues.length];
+            
+            schedule.push({
+                day: day,
+                time: time,
+                course: course.name,
+                course_code: course.code,
+                lecturer: course.lecturer,
+                venue: venue
+            });
+        }
+        
+        // Add some more variety
+        if (selectedCourses.length > 3) {
+            // Add a lab session
+            schedule.push({
+                day: 'Wednesday',
+                time: '2-4',
+                course: 'Programming Lab',
+                course_code: 'CSC101L',
+                lecturer: 'Dr. Adebayo',
+                venue: 'Lab C-301'
+            });
+        }
+        
+        return schedule;
+    }
+    
+    // ========================================================
+    // AUTO-REFRESH
+    // ========================================================
+    setInterval(() => {
+        if (userData) {
+            loadTimetable();
+        }
+    }, 60000); // Refresh every minute
+</script>
+</body>
+</html>

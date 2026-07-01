@@ -16,7 +16,6 @@
             --primary-light: #2a5a8c;
             --secondary: #e6b31e;
             --sidebar-width: 260px;
-            --header-height: 60px;
         }
         
         * {
@@ -189,6 +188,21 @@
             font-weight: 600;
         }
         
+        .sidebar .nav-divider {
+            height: 1px;
+            background: rgba(255,255,255,0.1);
+            margin: 10px 20px;
+        }
+        
+        .sidebar .nav-label {
+            padding: 8px 20px;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            color: rgba(255,255,255,0.4);
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        
         .sidebar .logout-btn {
             position: absolute;
             bottom: 20px;
@@ -285,7 +299,7 @@
         /* Stats Grid */
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
             gap: 15px;
             margin-bottom: 25px;
         }
@@ -305,19 +319,19 @@
         }
         
         .stat-card .number {
-            font-size: 2rem;
+            font-size: 1.8rem;
             font-weight: 700;
             color: var(--primary);
         }
         
         .stat-card .label {
             color: #6c757d;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
         
         .stat-card .icon {
             float: right;
-            font-size: 2.5rem;
+            font-size: 2rem;
             opacity: 0.2;
             color: var(--primary);
         }
@@ -361,16 +375,16 @@
             background: var(--primary);
             color: white;
             border: none;
-            padding: 12px 15px;
+            padding: 10px 12px;
             white-space: nowrap;
             font-weight: 600;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
         }
         
         .table tbody td {
-            padding: 10px 15px;
+            padding: 8px 12px;
             vertical-align: middle;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
         }
         
         .table tbody tr:hover {
@@ -379,14 +393,14 @@
         
         .table .actions {
             display: flex;
-            gap: 5px;
+            gap: 4px;
             flex-wrap: wrap;
         }
         
         .table .actions .btn {
-            padding: 4px 10px;
-            font-size: 0.75rem;
-            border-radius: 20px;
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            border-radius: 15px;
         }
         
         /* Modals */
@@ -423,7 +437,7 @@
         
         .modal .form-label {
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             color: var(--primary);
         }
         
@@ -436,6 +450,22 @@
         .modal .form-control:focus, .modal .form-select:focus {
             border-color: var(--secondary);
             box-shadow: 0 0 0 3px rgba(230, 179, 30, 0.2);
+        }
+        
+        .modal .form-control[readonly] {
+            background-color: #f8f9fa;
+            cursor: not-allowed;
+        }
+        
+        .modal .auto-id-badge {
+            background: var(--secondary);
+            color: var(--primary);
+            padding: 2px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 5px;
         }
         
         /* Toast */
@@ -499,6 +529,30 @@
             color: #4a5568;
         }
         
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        .loading-overlay.show {
+            display: flex;
+        }
+        
+        .loading-overlay .spinner-border {
+            width: 3rem;
+            height: 3rem;
+            color: var(--primary);
+        }
+        
         /* Responsive */
         @media (max-width: 992px) {
             .sidebar {
@@ -524,7 +578,7 @@
             }
             
             .stat-card .number {
-                font-size: 1.5rem;
+                font-size: 1.3rem;
             }
             
             .top-bar {
@@ -532,7 +586,7 @@
             }
             
             .top-bar .left-section h4 {
-                font-size: 1.1rem;
+                font-size: 1rem;
             }
             
             .content-panel {
@@ -555,34 +609,34 @@
             }
             
             .stat-card {
-                padding: 15px;
+                padding: 12px;
             }
             
             .stat-card .number {
-                font-size: 1.3rem;
+                font-size: 1.1rem;
             }
             
             .stat-card .label {
-                font-size: 0.75rem;
+                font-size: 0.7rem;
             }
             
             .table thead th {
-                font-size: 0.75rem;
-                padding: 8px 10px;
+                font-size: 0.7rem;
+                padding: 6px 8px;
             }
             
             .table tbody td {
-                font-size: 0.8rem;
-                padding: 8px 10px;
+                font-size: 0.75rem;
+                padding: 6px 8px;
             }
             
             .content-panel .panel-header h5 {
-                font-size: 0.95rem;
+                font-size: 0.85rem;
             }
             
             .content-panel .panel-header .btn {
-                font-size: 0.75rem;
-                padding: 6px 14px;
+                font-size: 0.7rem;
+                padding: 5px 12px;
             }
         }
         
@@ -607,30 +661,6 @@
             background: var(--primary) !important;
             color: white !important;
             border: none !important;
-        }
-        
-        /* Loading overlay */
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(255,255,255,0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        }
-        
-        .loading-overlay.show {
-            display: flex;
-        }
-        
-        .loading-overlay .spinner-border {
-            width: 3rem;
-            height: 3rem;
-            color: var(--primary);
         }
     </style>
 </head>
@@ -683,6 +713,9 @@
             <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
                 <i class="fas fa-chart-pie"></i> Dashboard
             </div>
+            
+            <div class="nav-label">Management</div>
+            
             <div class="nav-item" data-section="departments" onclick="showSection('departments')">
                 <i class="fas fa-building"></i> Departments
                 <span class="badge" id="deptBadge">0</span>
@@ -690,6 +723,10 @@
             <div class="nav-item" data-section="lecturers" onclick="showSection('lecturers')">
                 <i class="fas fa-user-tie"></i> Lecturers
                 <span class="badge" id="lecturerBadge">0</span>
+            </div>
+            <div class="nav-item" data-section="students" onclick="showSection('students')">
+                <i class="fas fa-user-graduate"></i> Students
+                <span class="badge" id="studentBadge">0</span>
             </div>
             <div class="nav-item" data-section="courses" onclick="showSection('courses')">
                 <i class="fas fa-book"></i> Courses
@@ -699,12 +736,26 @@
                 <i class="fas fa-door-open"></i> Halls
                 <span class="badge" id="hallBadge">0</span>
             </div>
+            
+            <div class="nav-divider"></div>
+            <div class="nav-label">Scheduling</div>
+            
             <div class="nav-item" data-section="exams" onclick="showSection('exams')">
                 <i class="fas fa-pencil-alt"></i> Exam Timetable
                 <span class="badge" id="examBadge">0</span>
             </div>
             <div class="nav-item" data-section="timetable" onclick="showSection('timetable')">
                 <i class="fas fa-calendar-alt"></i> Class Timetable
+            </div>
+            
+            <div class="nav-divider"></div>
+            <div class="nav-label">Public Views</div>
+            
+            <div class="nav-item" onclick="window.open('student.html', '_blank')">
+                <i class="fas fa-user-graduate"></i> Student View
+            </div>
+            <div class="nav-item" onclick="window.open('lecturer.html', '_blank')">
+                <i class="fas fa-chalkboard-teacher"></i> Lecturer View
             </div>
         </div>
         
@@ -741,6 +792,11 @@
                     <div class="icon"><i class="fas fa-user-tie"></i></div>
                     <div class="number" id="statLecturers">0</div>
                     <div class="label">Lecturers</div>
+                </div>
+                <div class="stat-card" onclick="showSection('students')">
+                    <div class="icon"><i class="fas fa-user-graduate"></i></div>
+                    <div class="number" id="statStudents">0</div>
+                    <div class="label">Students</div>
                 </div>
                 <div class="stat-card" onclick="showSection('courses')">
                     <div class="icon"><i class="fas fa-book"></i></div>
@@ -785,7 +841,7 @@
                                 <th>ID</th>
                                 <th>Name</th>
                                 <th>Code</th>
-                                <th>Head of Department</th>
+                                <th>Head</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
@@ -819,6 +875,35 @@
                             </tr>
                         </thead>
                         <tbody id="lecturersBody">
+                            <tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- ===== STUDENTS SECTION ===== -->
+        <div id="section-students" class="section-content">
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h5><i class="fas fa-user-graduate me-2"></i>Student Management</h5>
+                    <button class="btn btn-primary" onclick="openStudentModal()">
+                        <i class="fas fa-plus me-1"></i> Add Student
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="studentsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Level</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="studentsBody">
                             <tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>
                         </tbody>
                     </table>
@@ -967,14 +1052,15 @@
                     <input type="hidden" id="deptEditId">
                     <div class="mb-3">
                         <label class="form-label">Department ID</label>
-                        <input type="text" class="form-control" id="deptId" placeholder="e.g., CSC" required>
+                        <input type="text" class="form-control" id="deptId" readonly>
+                        <small class="text-muted">Auto-generated: <span id="deptIdPreview">DEPT-001</span></small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Department Name</label>
+                        <label class="form-label">Department Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="deptName" placeholder="e.g., Computer Science" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Department Code</label>
+                        <label class="form-label">Department Code <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="deptCode" placeholder="e.g., CSC" required>
                     </div>
                     <div class="mb-3">
@@ -1004,20 +1090,21 @@
                     <input type="hidden" id="lecturerEditId">
                     <div class="mb-3">
                         <label class="form-label">Lecturer ID</label>
-                        <input type="text" class="form-control" id="lecturerId" placeholder="e.g., LEC001" required>
+                        <input type="text" class="form-control" id="lecturerId" readonly>
+                        <small class="text-muted">Auto-generated: <span id="lecturerIdPreview">LEC-001</span></small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Full Name</label>
+                        <label class="form-label">Full Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="lecturerName" placeholder="e.g., Dr. John Ade" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Department</label>
+                        <label class="form-label">Department <span class="text-danger">*</span></label>
                         <select class="form-select" id="lecturerDept" required>
                             <option value="">Select Department</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Email</label>
+                        <label class="form-label">Email <span class="text-danger">*</span></label>
                         <input type="email" class="form-control" id="lecturerEmail" placeholder="e.g., john@polytechnic.edu" required>
                     </div>
                     <div class="mb-3">
@@ -1029,6 +1116,60 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button class="btn btn-primary" onclick="saveLecturer()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Student Modal -->
+<div class="modal fade" id="studentModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="studentModalTitle">Add Student</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="studentForm">
+                    <input type="hidden" id="studentEditId">
+                    <div class="mb-3">
+                        <label class="form-label">Student ID</label>
+                        <input type="text" class="form-control" id="studentId" readonly>
+                        <small class="text-muted">Auto-generated: <span id="studentIdPreview">STU-001</span></small>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Full Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="studentName" placeholder="e.g., John Doe" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Department <span class="text-danger">*</span></label>
+                        <select class="form-select" id="studentDept" required>
+                            <option value="">Select Department</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Level <span class="text-danger">*</span></label>
+                        <select class="form-select" id="studentLevel" required>
+                            <option value="100">100 Level</option>
+                            <option value="200">200 Level</option>
+                            <option value="300">300 Level</option>
+                            <option value="400">400 Level</option>
+                            <option value="500">500 Level</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="email" class="form-control" id="studentEmail" placeholder="e.g., john@polytechnic.edu">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Phone</label>
+                        <input type="text" class="form-control" id="studentPhone" placeholder="e.g., 08012345678">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveStudent()">Save</button>
             </div>
         </div>
     </div>
@@ -1047,30 +1188,31 @@
                     <input type="hidden" id="courseEditId">
                     <div class="mb-3">
                         <label class="form-label">Course Code</label>
-                        <input type="text" class="form-control" id="courseCode" placeholder="e.g., CSC101" required>
+                        <input type="text" class="form-control" id="courseCode" readonly>
+                        <small class="text-muted">Auto-generated: <span id="courseCodePreview">CSC-101</span></small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Course Name</label>
+                        <label class="form-label">Course Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="courseName" placeholder="e.g., Introduction to Programming" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Department</label>
-                        <select class="form-select" id="courseDept" required>
+                        <label class="form-label">Department <span class="text-danger">*</span></label>
+                        <select class="form-select" id="courseDept" required onchange="generateCourseCode()">
                             <option value="">Select Department</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Lecturer</label>
+                        <label class="form-label">Lecturer <span class="text-danger">*</span></label>
                         <select class="form-select" id="courseLecturer" required>
                             <option value="">Select Lecturer</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Credits</label>
+                        <label class="form-label">Credits <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="courseCredits" placeholder="e.g., 3" required min="1" max="6">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Semester</label>
+                        <label class="form-label">Semester <span class="text-danger">*</span></label>
                         <select class="form-select" id="courseSemester" required>
                             <option value="1">Semester 1</option>
                             <option value="2">Semester 2</option>
@@ -1099,18 +1241,19 @@
                     <input type="hidden" id="hallEditId">
                     <div class="mb-3">
                         <label class="form-label">Hall ID</label>
-                        <input type="text" class="form-control" id="hallId" placeholder="e.g., HALL-101" required>
+                        <input type="text" class="form-control" id="hallId" readonly>
+                        <small class="text-muted">Auto-generated: <span id="hallIdPreview">HALL-001</span></small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Hall Name</label>
+                        <label class="form-label">Hall Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="hallName" placeholder="e.g., Room 101" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Capacity</label>
+                        <label class="form-label">Capacity <span class="text-danger">*</span></label>
                         <input type="number" class="form-control" id="hallCapacity" placeholder="e.g., 100" required min="1">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Type</label>
+                        <label class="form-label">Type <span class="text-danger">*</span></label>
                         <select class="form-select" id="hallType" required>
                             <option value="Lecture">Lecture Hall</option>
                             <option value="Lab">Laboratory</option>
@@ -1146,16 +1289,17 @@
                     <input type="hidden" id="examEditId">
                     <div class="mb-3">
                         <label class="form-label">Exam ID</label>
-                        <input type="text" class="form-control" id="examId" placeholder="e.g., EXAM001" required>
+                        <input type="text" class="form-control" id="examId" readonly>
+                        <small class="text-muted">Auto-generated: <span id="examIdPreview">EXAM-001</span></small>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Course</label>
+                        <label class="form-label">Course <span class="text-danger">*</span></label>
                         <select class="form-select" id="examCourse" required>
                             <option value="">Select Course</option>
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Date</label>
+                        <label class="form-label">Date <span class="text-danger">*</span></label>
                         <select class="form-select" id="examDate" required>
                             <option value="Monday">Monday</option>
                             <option value="Tuesday">Tuesday</option>
@@ -1165,7 +1309,7 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Time</label>
+                        <label class="form-label">Time <span class="text-danger">*</span></label>
                         <select class="form-select" id="examTime" required>
                             <option value="9-11">9:00 - 11:00</option>
                             <option value="11-1">11:00 - 1:00</option>
@@ -1174,14 +1318,14 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Hall</label>
+                        <label class="form-label">Hall <span class="text-danger">*</span></label>
                         <select class="form-select" id="examHall" required>
                             <option value="">Select Hall</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Duration</label>
-                        <input type="text" class="form-control" id="examDuration" placeholder="e.g., 2 hours" value="2 hours" required>
+                        <input type="text" class="form-control" id="examDuration" placeholder="e.g., 2 hours" value="2 hours">
                     </div>
                 </form>
             </div>
@@ -1214,24 +1358,61 @@
     const ADMIN_API = `${API_URL}/admin`;
     let token = localStorage.getItem('adminToken') || '';
     let toast = null;
-    let dataTables = {};
+    
+    // ========================================================
+    // AUTO-ID GENERATORS
+    // ========================================================
+    const IDGenerators = {
+        department: async function() {
+            const count = await getCount('departments');
+            return `DEPT-${String(count + 1).padStart(3, '0')}`;
+        },
+        lecturer: async function() {
+            const count = await getCount('lecturers');
+            return `LEC-${String(count + 1).padStart(3, '0')}`;
+        },
+        student: async function() {
+            const count = await getCount('students');
+            return `STU-${String(count + 1).padStart(3, '0')}`;
+        },
+        course: async function(deptCode) {
+            const count = await getCount('courses');
+            const deptPrefix = deptCode || 'CSC';
+            const num = String(count + 1).padStart(3, '0');
+            return `${deptPrefix}-${num}`;
+        },
+        hall: async function() {
+            const count = await getCount('halls');
+            return `HALL-${String(count + 1).padStart(3, '0')}`;
+        },
+        exam: async function() {
+            const count = await getCount('exams');
+            return `EXAM-${String(count + 1).padStart(3, '0')}`;
+        }
+    };
+    
+    async function getCount(collection) {
+        try {
+            const data = await apiCall('/stats');
+            return data[collection] || 0;
+        } catch (error) {
+            return 0;
+        }
+    }
     
     // ========================================================
     // INITIALIZATION
     // ========================================================
     document.addEventListener('DOMContentLoaded', function() {
-        // Initialize toast
         const toastEl = document.getElementById('toastMessage');
         if (toastEl) {
             toast = new bootstrap.Toast(toastEl, { delay: 3000 });
         }
         
-        // Check login status
         if (token) {
             verifyToken();
         }
         
-        // Close sidebar on outside click
         document.addEventListener('click', function(e) {
             const sidebar = document.getElementById('sidebar');
             const toggle = document.querySelector('.sidebar-toggle');
@@ -1378,15 +1559,14 @@
     // SECTION NAVIGATION
     // ========================================================
     function showSection(section) {
-        // Update nav
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         document.querySelector(`.nav-item[data-section="${section}"]`)?.classList.add('active');
         
-        // Update title
         const titles = {
             dashboard: 'Dashboard',
             departments: 'Department Management',
             lecturers: 'Lecturer Management',
+            students: 'Student Management',
             courses: 'Course Management',
             halls: 'Hall Management',
             exams: 'Exam Timetable',
@@ -1394,18 +1574,16 @@
         };
         document.getElementById('sectionTitle').textContent = titles[section] || section;
         
-        // Show/hide sections
         document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
         document.getElementById(`section-${section}`)?.classList.add('active');
         
-        // Close sidebar on mobile
         document.getElementById('sidebar').classList.remove('open');
         
-        // Load data
         switch(section) {
             case 'dashboard': loadDashboard(); break;
             case 'departments': loadDepartments(); break;
             case 'lecturers': loadLecturers(); break;
+            case 'students': loadStudents(); break;
             case 'courses': loadCourses(); break;
             case 'halls': loadHalls(); break;
             case 'exams': loadExams(); break;
@@ -1422,12 +1600,14 @@
             
             document.getElementById('statDepartments').textContent = stats.departments || 0;
             document.getElementById('statLecturers').textContent = stats.lecturers || 0;
+            document.getElementById('statStudents').textContent = stats.students || 0;
             document.getElementById('statCourses').textContent = stats.courses || 0;
             document.getElementById('statHalls').textContent = stats.halls || 0;
             document.getElementById('statExams').textContent = stats.exams || 0;
             
             document.getElementById('deptBadge').textContent = stats.departments || 0;
             document.getElementById('lecturerBadge').textContent = stats.lecturers || 0;
+            document.getElementById('studentBadge').textContent = stats.students || 0;
             document.getElementById('courseBadge').textContent = stats.courses || 0;
             document.getElementById('hallBadge').textContent = stats.halls || 0;
             document.getElementById('examBadge').textContent = stats.exams || 0;
@@ -1443,11 +1623,15 @@
                     <small class="text-muted">Active</small>
                 </div>
                 <div class="d-flex justify-content-between py-2 border-bottom">
+                    <span><i class="fas fa-user-graduate text-info me-2"></i>${stats.students || 0} students</span>
+                    <small class="text-muted">Active</small>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
                     <span><i class="fas fa-book text-warning me-2"></i>${stats.courses || 0} courses</span>
                     <small class="text-muted">Active</small>
                 </div>
                 <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span><i class="fas fa-door-open text-info me-2"></i>${stats.halls || 0} halls</span>
+                    <span><i class="fas fa-door-open text-secondary me-2"></i>${stats.halls || 0} halls</span>
                     <small class="text-muted">Active</small>
                 </div>
                 <div class="d-flex justify-content-between py-2">
@@ -1499,20 +1683,23 @@
         }
     }
     
-    function openDepartmentModal(data = null) {
+    async function openDepartmentModal(data = null) {
         document.getElementById('departmentForm').reset();
         document.getElementById('deptEditId').value = '';
         document.getElementById('departmentModalTitle').textContent = 'Add Department';
-        document.getElementById('deptId').disabled = false;
         
         if (data) {
             document.getElementById('deptEditId').value = data.id;
             document.getElementById('deptId').value = data.id;
-            document.getElementById('deptId').disabled = true;
             document.getElementById('deptName').value = data.name;
             document.getElementById('deptCode').value = data.code;
             document.getElementById('deptHead').value = data.head || '';
             document.getElementById('departmentModalTitle').textContent = 'Edit Department';
+            document.getElementById('deptIdPreview').textContent = data.id;
+        } else {
+            const newId = await IDGenerators.department();
+            document.getElementById('deptId').value = newId;
+            document.getElementById('deptIdPreview').textContent = newId;
         }
         
         new bootstrap.Modal(document.getElementById('departmentModal')).show();
@@ -1538,7 +1725,7 @@
         const head = document.getElementById('deptHead').value;
         const editId = document.getElementById('deptEditId').value;
         
-        if (!id || !name || !code) {
+        if (!name || !code) {
             showToast('Please fill all required fields', 'warning');
             return;
         }
@@ -1590,7 +1777,6 @@
                 apiCall('/departments')
             ]);
             
-            // Populate department dropdown
             const deptSelect = document.getElementById('lecturerDept');
             deptSelect.innerHTML = '<option value="">Select Department</option>' + 
                 departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
@@ -1625,21 +1811,24 @@
         }
     }
     
-    function openLecturerModal(data = null) {
+    async function openLecturerModal(data = null) {
         document.getElementById('lecturerForm').reset();
         document.getElementById('lecturerEditId').value = '';
         document.getElementById('lecturerModalTitle').textContent = 'Add Lecturer';
-        document.getElementById('lecturerId').disabled = false;
         
         if (data) {
             document.getElementById('lecturerEditId').value = data.id;
             document.getElementById('lecturerId').value = data.id;
-            document.getElementById('lecturerId').disabled = true;
             document.getElementById('lecturerName').value = data.name;
             document.getElementById('lecturerDept').value = data.department;
             document.getElementById('lecturerEmail').value = data.email;
             document.getElementById('lecturerPhone').value = data.phone || '';
             document.getElementById('lecturerModalTitle').textContent = 'Edit Lecturer';
+            document.getElementById('lecturerIdPreview').textContent = data.id;
+        } else {
+            const newId = await IDGenerators.lecturer();
+            document.getElementById('lecturerId').value = newId;
+            document.getElementById('lecturerIdPreview').textContent = newId;
         }
         
         new bootstrap.Modal(document.getElementById('lecturerModal')).show();
@@ -1667,7 +1856,7 @@
         const phone = document.getElementById('lecturerPhone').value;
         const editId = document.getElementById('lecturerEditId').value;
         
-        if (!id || !name || !department || !email) {
+        if (!name || !department || !email) {
             showToast('Please fill all required fields', 'warning');
             return;
         }
@@ -1707,6 +1896,139 @@
     }
     
     // ========================================================
+    // STUDENTS CRUD
+    // ========================================================
+    async function loadStudents() {
+        const body = document.getElementById('studentsBody');
+        body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>';
+        
+        try {
+            const [students, departments] = await Promise.all([
+                apiCall('/students'),
+                apiCall('/departments')
+            ]);
+            
+            const deptSelect = document.getElementById('studentDept');
+            deptSelect.innerHTML = '<option value="">Select Department</option>' + 
+                departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
+            
+            if (students.length === 0) {
+                body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No students found</td></tr>';
+                return;
+            }
+            
+            body.innerHTML = students.map(s => `
+                <tr>
+                    <td><strong>${s.id}</strong></td>
+                    <td>${s.name}</td>
+                    <td>${s.department}</td>
+                    <td>Level ${s.level}</td>
+                    <td>${s.email || 'N/A'}</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn btn-sm btn-warning" onclick="editStudent('${s.id}')">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-sm btn-danger" onclick="deleteStudent('${s.id}')">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+            
+        } catch (error) {
+            body.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${error.message}</td></tr>`;
+        }
+    }
+    
+    async function openStudentModal(data = null) {
+        document.getElementById('studentForm').reset();
+        document.getElementById('studentEditId').value = '';
+        document.getElementById('studentModalTitle').textContent = 'Add Student';
+        
+        if (data) {
+            document.getElementById('studentEditId').value = data.id;
+            document.getElementById('studentId').value = data.id;
+            document.getElementById('studentName').value = data.name;
+            document.getElementById('studentDept').value = data.department;
+            document.getElementById('studentLevel').value = data.level;
+            document.getElementById('studentEmail').value = data.email || '';
+            document.getElementById('studentPhone').value = data.phone || '';
+            document.getElementById('studentModalTitle').textContent = 'Edit Student';
+            document.getElementById('studentIdPreview').textContent = data.id;
+        } else {
+            const newId = await IDGenerators.student();
+            document.getElementById('studentId').value = newId;
+            document.getElementById('studentIdPreview').textContent = newId;
+        }
+        
+        new bootstrap.Modal(document.getElementById('studentModal')).show();
+    }
+    
+    function editStudent(id) {
+        const row = document.querySelector(`#studentsBody tr td:first-child:contains("${id}")`)?.parentElement;
+        if (row) {
+            const cells = row.querySelectorAll('td');
+            openStudentModal({
+                id: cells[0].textContent.trim(),
+                name: cells[1].textContent.trim(),
+                department: cells[2].textContent.trim(),
+                level: parseInt(cells[3].textContent.trim().replace('Level ', '')),
+                email: cells[4].textContent.trim() !== 'N/A' ? cells[4].textContent.trim() : ''
+            });
+        }
+    }
+    
+    async function saveStudent() {
+        const id = document.getElementById('studentId').value;
+        const name = document.getElementById('studentName').value;
+        const department = document.getElementById('studentDept').value;
+        const level = parseInt(document.getElementById('studentLevel').value);
+        const email = document.getElementById('studentEmail').value;
+        const phone = document.getElementById('studentPhone').value;
+        const editId = document.getElementById('studentEditId').value;
+        
+        if (!name || !department || !level) {
+            showToast('Please fill all required fields', 'warning');
+            return;
+        }
+        
+        const data = { id, name, department, level, email, phone };
+        const url = editId ? `/students/${editId}` : '/students';
+        const method = editId ? 'PUT' : 'POST';
+        
+        showLoading(true);
+        try {
+            await apiCall(url, { method, body: JSON.stringify(data) });
+            showToast(`Student ${editId ? 'updated' : 'added'} successfully!`, 'success');
+            bootstrap.Modal.getInstance(document.getElementById('studentModal')).hide();
+            loadStudents();
+            loadDashboard();
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        } finally {
+            showLoading(false);
+        }
+    }
+    
+    async function deleteStudent(id) {
+        if (!confirm(`Delete student ${id}?`)) return;
+        
+        showLoading(true);
+        try {
+            await apiCall(`/students/${id}`, { method: 'DELETE' });
+            showToast('Student deleted!', 'success');
+            loadStudents();
+            loadDashboard();
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        } finally {
+            showLoading(false);
+        }
+    }
+    
+    // ========================================================
     // COURSES CRUD
     // ========================================================
     async function loadCourses() {
@@ -1720,7 +2042,6 @@
                 apiCall('/lecturers')
             ]);
             
-            // Populate dropdowns
             const deptSelect = document.getElementById('courseDept');
             deptSelect.innerHTML = '<option value="">Select Department</option>' + 
                 departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
@@ -1760,7 +2081,18 @@
         }
     }
     
-    function openCourseModal(data = null) {
+    function generateCourseCode() {
+        const dept = document.getElementById('courseDept').value;
+        const preview = document.getElementById('courseCodePreview');
+        if (dept) {
+            const code = dept.substring(0, 3).toUpperCase();
+            preview.textContent = `${code}-101`;
+        } else {
+            preview.textContent = 'CSC-101';
+        }
+    }
+    
+    async function openCourseModal(data = null) {
         document.getElementById('courseForm').reset();
         document.getElementById('courseEditId').value = '';
         document.getElementById('courseModalTitle').textContent = 'Add Course';
@@ -1776,6 +2108,16 @@
             document.getElementById('courseCredits').value = data.credits;
             document.getElementById('courseSemester').value = data.semester;
             document.getElementById('courseModalTitle').textContent = 'Edit Course';
+            document.getElementById('courseCodePreview').textContent = data.code;
+        } else {
+            document.getElementById('courseCode').disabled = false;
+            const dept = document.getElementById('courseDept').value || 'CSC';
+            const deptCode = dept.substring(0, 3).toUpperCase();
+            const count = await getCount('courses');
+            const num = String(count + 1).padStart(3, '0');
+            const newCode = `${deptCode}-${num}`;
+            document.getElementById('courseCode').value = newCode;
+            document.getElementById('courseCodePreview').textContent = newCode;
         }
         
         new bootstrap.Modal(document.getElementById('courseModal')).show();
@@ -1805,7 +2147,7 @@
         const semester = parseInt(document.getElementById('courseSemester').value);
         const editId = document.getElementById('courseEditId').value;
         
-        if (!code || !name || !department || !lecturer || !credits) {
+        if (!name || !department || !lecturer || !credits) {
             showToast('Please fill all required fields', 'warning');
             return;
         }
@@ -1884,21 +2226,24 @@
         }
     }
     
-    function openHallModal(data = null) {
+    async function openHallModal(data = null) {
         document.getElementById('hallForm').reset();
         document.getElementById('hallEditId').value = '';
         document.getElementById('hallModalTitle').textContent = 'Add Hall';
-        document.getElementById('hallId').disabled = false;
         
         if (data) {
             document.getElementById('hallEditId').value = data.id;
             document.getElementById('hallId').value = data.id;
-            document.getElementById('hallId').disabled = true;
             document.getElementById('hallName').value = data.name;
             document.getElementById('hallCapacity').value = data.capacity;
             document.getElementById('hallType').value = data.type;
             document.getElementById('hallLocation').value = data.location || '';
             document.getElementById('hallModalTitle').textContent = 'Edit Hall';
+            document.getElementById('hallIdPreview').textContent = data.id;
+        } else {
+            const newId = await IDGenerators.hall();
+            document.getElementById('hallId').value = newId;
+            document.getElementById('hallIdPreview').textContent = newId;
         }
         
         new bootstrap.Modal(document.getElementById('hallModal')).show();
@@ -1926,7 +2271,7 @@
         const location = document.getElementById('hallLocation').value;
         const editId = document.getElementById('hallEditId').value;
         
-        if (!id || !name || !capacity || !type) {
+        if (!name || !capacity || !type) {
             showToast('Please fill all required fields', 'warning');
             return;
         }
@@ -1979,7 +2324,6 @@
                 apiCall('/halls')
             ]);
             
-            // Populate dropdowns
             const courseSelect = document.getElementById('examCourse');
             courseSelect.innerHTML = '<option value="">Select Course</option>' + 
                 courses.map(c => `<option value="${c.code}">${c.code} - ${c.name}</option>`).join('');
@@ -2019,22 +2363,25 @@
         }
     }
     
-    function openExamModal(data = null) {
+    async function openExamModal(data = null) {
         document.getElementById('examForm').reset();
         document.getElementById('examEditId').value = '';
         document.getElementById('examModalTitle').textContent = 'Add Exam';
-        document.getElementById('examId').disabled = false;
         
         if (data) {
             document.getElementById('examEditId').value = data.id;
             document.getElementById('examId').value = data.id;
-            document.getElementById('examId').disabled = true;
             document.getElementById('examCourse').value = data.course;
             document.getElementById('examDate').value = data.date;
             document.getElementById('examTime').value = data.time;
             document.getElementById('examHall').value = data.hall;
             document.getElementById('examDuration').value = data.duration || '2 hours';
             document.getElementById('examModalTitle').textContent = 'Edit Exam';
+            document.getElementById('examIdPreview').textContent = data.id;
+        } else {
+            const newId = await IDGenerators.exam();
+            document.getElementById('examId').value = newId;
+            document.getElementById('examIdPreview').textContent = newId;
         }
         
         new bootstrap.Modal(document.getElementById('examModal')).show();
@@ -2064,7 +2411,7 @@
         const duration = document.getElementById('examDuration').value;
         const editId = document.getElementById('examEditId').value;
         
-        if (!id || !course || !date || !time || !hall) {
+        if (!course || !date || !time || !hall) {
             showToast('Please fill all required fields', 'warning');
             return;
         }
@@ -2108,7 +2455,7 @@
         
         showLoading(true);
         try {
-            const result = await apiCall('/exams/generate', { method: 'POST' });
+            await apiCall('/exams/generate', { method: 'POST' });
             showToast('✅ Exam schedule generated!', 'success');
             loadExams();
             loadDashboard();
@@ -2202,7 +2549,7 @@
         
         showLoading(true);
         try {
-            const result = await apiCall('/timetable/generate', {
+            await apiCall('/timetable/generate', {
                 method: 'POST',
                 body: JSON.stringify({
                     days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
