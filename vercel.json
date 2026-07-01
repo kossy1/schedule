@@ -2,18 +2,33 @@
   "version": 2,
   "builds": [
     {
-      "src": "api/app.py",
-      "use": "@vercel/python"
+      "src": "api/vercel_app.py",
+      "use": "@vercel/python",
+      "config": {
+        "includeFiles": ["api/**"]
+      }
     },
     {
       "src": "frontend/index.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "frontend/admin.html",
       "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "api/app.py"
+      "dest": "api/vercel_app.py"
+    },
+    {
+      "src": "/admin",
+      "dest": "frontend/admin.html"
+    },
+    {
+      "src": "/",
+      "dest": "frontend/index.html"
     },
     {
       "src": "/(.*)",
