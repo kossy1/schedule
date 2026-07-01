@@ -28,7 +28,6 @@
             overflow-x: hidden;
         }
         
-        /* Login Page */
         .login-container {
             min-height: 100vh;
             display: flex;
@@ -110,12 +109,10 @@
             }
         }
         
-        /* Dashboard */
         .dashboard-container {
             display: none;
         }
         
-        /* Sidebar */
         .sidebar {
             position: fixed;
             left: 0;
@@ -236,14 +233,12 @@
             border-radius: 10px;
         }
         
-        /* Main Content */
         .main-content {
             margin-left: var(--sidebar-width);
             padding: 20px;
             min-height: 100vh;
         }
         
-        /* Top Bar */
         .top-bar {
             background: white;
             padding: 12px 25px;
@@ -296,7 +291,6 @@
             cursor: pointer;
         }
         
-        /* Stats Grid */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -336,7 +330,6 @@
             color: var(--primary);
         }
         
-        /* Content Panel */
         .content-panel {
             background: white;
             border-radius: 16px;
@@ -366,7 +359,6 @@
             font-size: 0.85rem;
         }
         
-        /* Table */
         .table-responsive {
             overflow-x: auto;
         }
@@ -403,7 +395,6 @@
             border-radius: 15px;
         }
         
-        /* Modals */
         .modal-content {
             border-radius: 16px;
             border: none;
@@ -457,18 +448,41 @@
             cursor: not-allowed;
         }
         
-        .modal .auto-id-badge {
-            background: var(--secondary);
-            color: var(--primary);
-            padding: 2px 12px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            display: inline-block;
-            margin-top: 5px;
+        .csv-upload-area {
+            border: 2px dashed #e2e8f0;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
         }
         
-        /* Toast */
+        .csv-upload-area:hover {
+            border-color: var(--secondary);
+            background: rgba(230, 179, 30, 0.05);
+        }
+        
+        .csv-upload-area.dragover {
+            border-color: var(--secondary);
+            background: rgba(230, 179, 30, 0.1);
+        }
+        
+        .csv-upload-area i {
+            font-size: 3rem;
+            color: #a0aec0;
+            display: block;
+            margin-bottom: 10px;
+        }
+        
+        .csv-upload-area p {
+            margin: 0;
+            color: #4a5568;
+        }
+        
+        .csv-upload-area small {
+            color: #a0aec0;
+        }
+        
         .toast-container {
             position: fixed;
             top: 20px;
@@ -488,7 +502,6 @@
             font-weight: 500;
         }
         
-        /* Section visibility */
         .section-content {
             display: none;
         }
@@ -509,7 +522,6 @@
             }
         }
         
-        /* Empty state */
         .empty-state {
             text-align: center;
             padding: 40px 20px;
@@ -529,7 +541,6 @@
             color: #4a5568;
         }
         
-        /* Loading Overlay */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -553,20 +564,32 @@
             color: var(--primary);
         }
         
-        /* Responsive */
+        .progress-custom {
+            height: 6px;
+            border-radius: 10px;
+            background: #e2e8f0;
+            margin-top: 10px;
+            display: none;
+        }
+        
+        .progress-custom .progress-bar-custom {
+            height: 100%;
+            border-radius: 10px;
+            background: linear-gradient(90deg, var(--secondary), var(--primary));
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+        
         @media (max-width: 992px) {
             .sidebar {
                 transform: translateX(-100%);
             }
-            
             .sidebar.open {
                 transform: translateX(0);
             }
-            
             .main-content {
                 margin-left: 0;
             }
-            
             .sidebar-toggle {
                 display: block;
             }
@@ -576,27 +599,21 @@
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
             }
-            
             .stat-card .number {
                 font-size: 1.3rem;
             }
-            
             .top-bar {
                 padding: 12px 15px;
             }
-            
             .top-bar .left-section h4 {
                 font-size: 1rem;
             }
-            
             .content-panel {
                 padding: 15px;
             }
-            
             .login-box {
                 padding: 25px;
             }
-            
             .modal-body {
                 padding: 15px;
             }
@@ -607,40 +624,25 @@
                 grid-template-columns: 1fr 1fr;
                 gap: 10px;
             }
-            
             .stat-card {
                 padding: 12px;
             }
-            
             .stat-card .number {
                 font-size: 1.1rem;
             }
-            
             .stat-card .label {
                 font-size: 0.7rem;
             }
-            
             .table thead th {
                 font-size: 0.7rem;
                 padding: 6px 8px;
             }
-            
             .table tbody td {
                 font-size: 0.75rem;
                 padding: 6px 8px;
             }
-            
-            .content-panel .panel-header h5 {
-                font-size: 0.85rem;
-            }
-            
-            .content-panel .panel-header .btn {
-                font-size: 0.7rem;
-                padding: 5px 12px;
-            }
         }
         
-        /* DataTables customization */
         .dataTables_wrapper .dataTables_filter input {
             border-radius: 25px;
             padding: 6px 15px;
@@ -882,21 +884,27 @@
             </div>
         </div>
         
-        <!-- ===== STUDENTS SECTION ===== -->
+        <!-- ===== STUDENTS SECTION WITH MATRIC NUMBER ===== -->
         <div id="section-students" class="section-content">
             <div class="content-panel">
                 <div class="panel-header">
                     <h5><i class="fas fa-user-graduate me-2"></i>Student Management</h5>
-                    <button class="btn btn-primary" onclick="openStudentModal()">
-                        <i class="fas fa-plus me-1"></i> Add Student
-                    </button>
+                    <div>
+                        <button class="btn btn-success me-1" onclick="openCSVUploadModal()">
+                            <i class="fas fa-file-csv me-1"></i> Bulk Upload
+                        </button>
+                        <button class="btn btn-primary" onclick="openStudentModal()">
+                            <i class="fas fa-plus me-1"></i> Add Student
+                        </button>
+                    </div>
                 </div>
                 <div class="table-responsive">
                     <table class="table table-hover" id="studentsTable">
                         <thead>
                             <tr>
-                                <th>ID</th>
+                                <th>Matric No</th>
                                 <th>Name</th>
+                                <th>Surname</th>
                                 <th>Department</th>
                                 <th>Level</th>
                                 <th>Email</th>
@@ -904,7 +912,7 @@
                             </tr>
                         </thead>
                         <tbody id="studentsBody">
-                            <tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>
+                            <tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -1089,13 +1097,17 @@
                 <form id="lecturerForm">
                     <input type="hidden" id="lecturerEditId">
                     <div class="mb-3">
-                        <label class="form-label">Lecturer ID</label>
+                        <label class="form-label">Staff ID</label>
                         <input type="text" class="form-control" id="lecturerId" readonly>
                         <small class="text-muted">Auto-generated: <span id="lecturerIdPreview">LEC-001</span></small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Full Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="lecturerName" placeholder="e.g., Dr. John Ade" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Surname <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="lecturerSurname" placeholder="e.g., Ade" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Department <span class="text-danger">*</span></label>
@@ -1121,7 +1133,7 @@
     </div>
 </div>
 
-<!-- Student Modal -->
+<!-- Student Modal with Matric Number -->
 <div class="modal fade" id="studentModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1133,13 +1145,17 @@
                 <form id="studentForm">
                     <input type="hidden" id="studentEditId">
                     <div class="mb-3">
-                        <label class="form-label">Student ID</label>
-                        <input type="text" class="form-control" id="studentId" readonly>
-                        <small class="text-muted">Auto-generated: <span id="studentIdPreview">STU-001</span></small>
+                        <label class="form-label">Matric Number</label>
+                        <input type="text" class="form-control" id="studentMatric" readonly>
+                        <small class="text-muted">Auto-generated: <span id="studentMatricPreview">HND/CSC/2024/001</span></small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Full Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" id="studentName" placeholder="e.g., John Doe" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Surname <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="studentSurname" placeholder="e.g., Doe" required>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Department <span class="text-danger">*</span></label>
@@ -1170,6 +1186,62 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 <button class="btn btn-primary" onclick="saveStudent()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- CSV Upload Modal -->
+<div class="modal fade" id="csvUploadModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="fas fa-file-csv me-2"></i>Bulk Upload Students (CSV)</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>CSV Format:</strong> The CSV file should have columns: <code>name, surname, department_id, level, email, phone</code>
+                    <br>
+                    <small>Department ID must match existing department IDs (e.g., CSC, ENG, MTH)</small>
+                </div>
+                
+                <div class="csv-upload-area" id="csvDropArea" onclick="document.getElementById('csvFileInput').click()">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p><strong>Click or drag & drop CSV file here</strong></p>
+                    <small>Supported format: .csv (max 10MB)</small>
+                    <input type="file" id="csvFileInput" accept=".csv" style="display:none" onchange="handleCSVFile(event)">
+                </div>
+                
+                <div id="csvPreview" style="display:none; margin-top: 15px;">
+                    <h6 class="fw-bold">Preview (<span id="csvRowCount">0</span> rows)</h6>
+                    <div class="table-responsive" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm table-bordered" id="csvPreviewTable">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Surname</th>
+                                    <th>Department</th>
+                                    <th>Level</th>
+                                    <th>Email</th>
+                                    <th>Phone</th>
+                                </tr>
+                            </thead>
+                            <tbody id="csvPreviewBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="progress-custom" id="uploadProgress">
+                        <div class="progress-bar-custom" id="uploadProgressBar"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-success" id="csvUploadBtn" onclick="uploadCSV()" disabled>
+                    <i class="fas fa-upload me-1"></i> Upload Students
+                </button>
             </div>
         </div>
     </div>
@@ -1358,6 +1430,7 @@
     const ADMIN_API = `${API_URL}/admin`;
     let token = localStorage.getItem('adminToken') || '';
     let toast = null;
+    let csvData = [];
     
     // ========================================================
     // AUTO-ID GENERATORS
@@ -1371,9 +1444,11 @@
             const count = await getCount('lecturers');
             return `LEC-${String(count + 1).padStart(3, '0')}`;
         },
-        student: async function() {
+        studentMatric: async function(deptCode) {
             const count = await getCount('students');
-            return `STU-${String(count + 1).padStart(3, '0')}`;
+            const dept = deptCode || 'CSC';
+            const year = new Date().getFullYear();
+            return `HND/${dept}/${year}/${String(count + 1).padStart(3, '0')}`;
         },
         course: async function(deptCode) {
             const count = await getCount('courses');
@@ -1411,6 +1486,30 @@
         
         if (token) {
             verifyToken();
+        }
+        
+        // CSV Drag and Drop
+        const dropArea = document.getElementById('csvDropArea');
+        if (dropArea) {
+            dropArea.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                this.classList.add('dragover');
+            });
+            
+            dropArea.addEventListener('dragleave', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+            });
+            
+            dropArea.addEventListener('drop', function(e) {
+                e.preventDefault();
+                this.classList.remove('dragover');
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    document.getElementById('csvFileInput').files = files;
+                    handleCSVFile({ target: { files: files } });
+                }
+            });
         }
         
         document.addEventListener('click', function(e) {
@@ -1678,6 +1777,15 @@
                 </tr>
             `).join('');
             
+            if ($.fn.DataTable.isDataTable('#departmentsTable')) {
+                $('#departmentsTable').DataTable().destroy();
+            }
+            $('#departmentsTable').DataTable({
+                pageLength: 10,
+                order: [[0, 'asc']],
+                responsive: true
+            });
+            
         } catch (error) {
             body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
         }
@@ -1706,15 +1814,18 @@
     }
     
     function editDepartment(id) {
-        const row = document.querySelector(`#departmentsBody tr td:first-child:contains("${id}")`)?.parentElement;
-        if (row) {
+        const rows = document.querySelectorAll('#departmentsBody tr');
+        for (const row of rows) {
             const cells = row.querySelectorAll('td');
-            openDepartmentModal({
-                id: cells[0].textContent.trim(),
-                name: cells[1].textContent.trim(),
-                code: cells[2].textContent.trim(),
-                head: cells[3].textContent.trim() !== 'N/A' ? cells[3].textContent.trim() : ''
-            });
+            if (cells.length > 0 && cells[0].textContent.trim() === id) {
+                openDepartmentModal({
+                    id: cells[0].textContent.trim(),
+                    name: cells[1].textContent.trim(),
+                    code: cells[2].textContent.trim(),
+                    head: cells[3].textContent.trim() !== 'N/A' ? cells[3].textContent.trim() : ''
+                });
+                break;
+            }
         }
     }
     
@@ -1790,9 +1901,9 @@
                 <tr>
                     <td><strong>${l.id}</strong></td>
                     <td>${l.name}</td>
+                    <td>${l.surname || 'N/A'}</td>
                     <td>${l.department}</td>
                     <td>${l.email}</td>
-                    <td>${l.phone || 'N/A'}</td>
                     <td>
                         <div class="actions">
                             <button class="btn btn-sm btn-warning" onclick="editLecturer('${l.id}')">
@@ -1805,6 +1916,15 @@
                     </td>
                 </tr>
             `).join('');
+            
+            if ($.fn.DataTable.isDataTable('#lecturersTable')) {
+                $('#lecturersTable').DataTable().destroy();
+            }
+            $('#lecturersTable').DataTable({
+                pageLength: 10,
+                order: [[0, 'asc']],
+                responsive: true
+            });
             
         } catch (error) {
             body.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${error.message}</td></tr>`;
@@ -1820,6 +1940,7 @@
             document.getElementById('lecturerEditId').value = data.id;
             document.getElementById('lecturerId').value = data.id;
             document.getElementById('lecturerName').value = data.name;
+            document.getElementById('lecturerSurname').value = data.surname || '';
             document.getElementById('lecturerDept').value = data.department;
             document.getElementById('lecturerEmail').value = data.email;
             document.getElementById('lecturerPhone').value = data.phone || '';
@@ -1835,33 +1956,37 @@
     }
     
     function editLecturer(id) {
-        const row = document.querySelector(`#lecturersBody tr td:first-child:contains("${id}")`)?.parentElement;
-        if (row) {
+        const rows = document.querySelectorAll('#lecturersBody tr');
+        for (const row of rows) {
             const cells = row.querySelectorAll('td');
-            openLecturerModal({
-                id: cells[0].textContent.trim(),
-                name: cells[1].textContent.trim(),
-                department: cells[2].textContent.trim(),
-                email: cells[3].textContent.trim(),
-                phone: cells[4].textContent.trim() !== 'N/A' ? cells[4].textContent.trim() : ''
-            });
+            if (cells.length > 0 && cells[0].textContent.trim() === id) {
+                openLecturerModal({
+                    id: cells[0].textContent.trim(),
+                    name: cells[1].textContent.trim(),
+                    surname: cells[2].textContent.trim() !== 'N/A' ? cells[2].textContent.trim() : '',
+                    department: cells[3].textContent.trim(),
+                    email: cells[4].textContent.trim()
+                });
+                break;
+            }
         }
     }
     
     async function saveLecturer() {
         const id = document.getElementById('lecturerId').value;
         const name = document.getElementById('lecturerName').value;
+        const surname = document.getElementById('lecturerSurname').value;
         const department = document.getElementById('lecturerDept').value;
         const email = document.getElementById('lecturerEmail').value;
         const phone = document.getElementById('lecturerPhone').value;
         const editId = document.getElementById('lecturerEditId').value;
         
-        if (!name || !department || !email) {
+        if (!name || !surname || !department || !email) {
             showToast('Please fill all required fields', 'warning');
             return;
         }
         
-        const data = { id, name, department, email, phone };
+        const data = { id, name, surname, department, email, phone };
         const url = editId ? `/lecturers/${editId}` : '/lecturers';
         const method = editId ? 'PUT' : 'POST';
         
@@ -1896,11 +2021,11 @@
     }
     
     // ========================================================
-    // STUDENTS CRUD
+    // STUDENTS CRUD with Matric Number
     // ========================================================
     async function loadStudents() {
         const body = document.getElementById('studentsBody');
-        body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>';
+        body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>';
         
         try {
             const [students, departments] = await Promise.all([
@@ -1913,23 +2038,24 @@
                 departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
             
             if (students.length === 0) {
-                body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No students found</td></tr>';
+                body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No students found</td></tr>';
                 return;
             }
             
             body.innerHTML = students.map(s => `
                 <tr>
-                    <td><strong>${s.id}</strong></td>
+                    <td><strong>${s.matric || s.id}</strong></td>
                     <td>${s.name}</td>
+                    <td>${s.surname || 'N/A'}</td>
                     <td>${s.department}</td>
                     <td>Level ${s.level}</td>
                     <td>${s.email || 'N/A'}</td>
                     <td>
                         <div class="actions">
-                            <button class="btn btn-sm btn-warning" onclick="editStudent('${s.id}')">
+                            <button class="btn btn-sm btn-warning" onclick="editStudent('${s.matric || s.id}')">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-danger" onclick="deleteStudent('${s.id}')">
+                            <button class="btn btn-sm btn-danger" onclick="deleteStudent('${s.matric || s.id}')">
                                 <i class="fas fa-trash"></i>
                             </button>
                         </div>
@@ -1937,8 +2063,17 @@
                 </tr>
             `).join('');
             
+            if ($.fn.DataTable.isDataTable('#studentsTable')) {
+                $('#studentsTable').DataTable().destroy();
+            }
+            $('#studentsTable').DataTable({
+                pageLength: 10,
+                order: [[0, 'asc']],
+                responsive: true
+            });
+            
         } catch (error) {
-            body.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${error.message}</td></tr>`;
+            body.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${error.message}</td></tr>`;
         }
     }
     
@@ -1948,53 +2083,65 @@
         document.getElementById('studentModalTitle').textContent = 'Add Student';
         
         if (data) {
-            document.getElementById('studentEditId').value = data.id;
-            document.getElementById('studentId').value = data.id;
+            document.getElementById('studentEditId').value = data.matric || data.id;
+            document.getElementById('studentMatric').value = data.matric || data.id;
+            document.getElementById('studentMatric').disabled = true;
             document.getElementById('studentName').value = data.name;
+            document.getElementById('studentSurname').value = data.surname || '';
             document.getElementById('studentDept').value = data.department;
             document.getElementById('studentLevel').value = data.level;
             document.getElementById('studentEmail').value = data.email || '';
             document.getElementById('studentPhone').value = data.phone || '';
             document.getElementById('studentModalTitle').textContent = 'Edit Student';
-            document.getElementById('studentIdPreview').textContent = data.id;
+            document.getElementById('studentMatricPreview').textContent = data.matric || data.id;
         } else {
-            const newId = await IDGenerators.student();
-            document.getElementById('studentId').value = newId;
-            document.getElementById('studentIdPreview').textContent = newId;
+            document.getElementById('studentMatric').disabled = false;
+            const dept = document.getElementById('studentDept').value || 'CSC';
+            const deptCode = dept.substring(0, 3).toUpperCase();
+            const count = await getCount('students');
+            const year = new Date().getFullYear();
+            const newMatric = `HND/${deptCode}/${year}/${String(count + 1).padStart(3, '0')}`;
+            document.getElementById('studentMatric').value = newMatric;
+            document.getElementById('studentMatricPreview').textContent = newMatric;
         }
         
         new bootstrap.Modal(document.getElementById('studentModal')).show();
     }
     
     function editStudent(id) {
-        const row = document.querySelector(`#studentsBody tr td:first-child:contains("${id}")`)?.parentElement;
-        if (row) {
+        const rows = document.querySelectorAll('#studentsBody tr');
+        for (const row of rows) {
             const cells = row.querySelectorAll('td');
-            openStudentModal({
-                id: cells[0].textContent.trim(),
-                name: cells[1].textContent.trim(),
-                department: cells[2].textContent.trim(),
-                level: parseInt(cells[3].textContent.trim().replace('Level ', '')),
-                email: cells[4].textContent.trim() !== 'N/A' ? cells[4].textContent.trim() : ''
-            });
+            if (cells.length > 0 && cells[0].textContent.trim() === id) {
+                openStudentModal({
+                    matric: cells[0].textContent.trim(),
+                    name: cells[1].textContent.trim(),
+                    surname: cells[2].textContent.trim() !== 'N/A' ? cells[2].textContent.trim() : '',
+                    department: cells[3].textContent.trim(),
+                    level: parseInt(cells[4].textContent.trim().replace('Level ', '')),
+                    email: cells[5].textContent.trim() !== 'N/A' ? cells[5].textContent.trim() : ''
+                });
+                break;
+            }
         }
     }
     
     async function saveStudent() {
-        const id = document.getElementById('studentId').value;
+        const matric = document.getElementById('studentMatric').value;
         const name = document.getElementById('studentName').value;
+        const surname = document.getElementById('studentSurname').value;
         const department = document.getElementById('studentDept').value;
         const level = parseInt(document.getElementById('studentLevel').value);
         const email = document.getElementById('studentEmail').value;
         const phone = document.getElementById('studentPhone').value;
         const editId = document.getElementById('studentEditId').value;
         
-        if (!name || !department || !level) {
+        if (!name || !surname || !department || !level) {
             showToast('Please fill all required fields', 'warning');
             return;
         }
         
-        const data = { id, name, department, level, email, phone };
+        const data = { matric, name, surname, department, level, email, phone };
         const url = editId ? `/students/${editId}` : '/students';
         const method = editId ? 'PUT' : 'POST';
         
@@ -2026,6 +2173,158 @@
         } finally {
             showLoading(false);
         }
+    }
+    
+    // ========================================================
+    // CSV BULK UPLOAD with Matric Number
+    // ========================================================
+    function openCSVUploadModal() {
+        document.getElementById('csvFileInput').value = '';
+        document.getElementById('csvPreview').style.display = 'none';
+        document.getElementById('csvUploadBtn').disabled = true;
+        document.getElementById('uploadProgress').style.display = 'none';
+        document.getElementById('uploadProgressBar').style.width = '0%';
+        csvData = [];
+        new bootstrap.Modal(document.getElementById('csvUploadModal')).show();
+    }
+    
+    function handleCSVFile(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            parseCSV(text);
+        };
+        reader.readAsText(file);
+    }
+    
+    function parseCSV(text) {
+        const lines = text.split('\n').filter(line => line.trim());
+        if (lines.length === 0) {
+            showToast('CSV file is empty', 'warning');
+            return;
+        }
+        
+        // Parse headers
+        const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+        const expected = ['name', 'surname', 'department_id', 'level', 'email', 'phone'];
+        
+        // Check if headers match expected format
+        const missing = expected.filter(h => !headers.includes(h));
+        if (missing.length > 0) {
+            showToast(`Missing columns: ${missing.join(', ')}`, 'warning');
+            return;
+        }
+        
+        // Parse data
+        csvData = [];
+        const previewBody = document.getElementById('csvPreviewBody');
+        previewBody.innerHTML = '';
+        
+        const year = new Date().getFullYear();
+        
+        for (let i = 1; i < lines.length; i++) {
+            const values = lines[i].split(',').map(v => v.trim());
+            const row = {};
+            headers.forEach((h, idx) => {
+                row[h] = values[idx] || '';
+            });
+            
+            // Validate
+            if (!row.name || !row.surname || !row.department_id || !row.level) {
+                continue; // Skip invalid rows
+            }
+            
+            // Generate matric number
+            const deptCode = row.department_id.substring(0, 3).toUpperCase();
+            const count = csvData.length + 1;
+            row.matric = `HND/${deptCode}/${year}/${String(count).padStart(3, '0')}`;
+            
+            csvData.push(row);
+            
+            // Add to preview
+            previewBody.innerHTML += `
+                <tr>
+                    <td>${i}</td>
+                    <td>${row.name}</td>
+                    <td>${row.surname}</td>
+                    <td>${row.department_id}</td>
+                    <td>${row.level}</td>
+                    <td>${row.email || '-'}</td>
+                    <td>${row.phone || '-'}</td>
+                </tr>
+            `;
+        }
+        
+        if (csvData.length === 0) {
+            showToast('No valid data found in CSV', 'warning');
+            return;
+        }
+        
+        document.getElementById('csvRowCount').textContent = csvData.length;
+        document.getElementById('csvPreview').style.display = 'block';
+        document.getElementById('csvUploadBtn').disabled = false;
+        showToast(`✅ Loaded ${csvData.length} students from CSV`, 'success');
+    }
+    
+    async function uploadCSV() {
+        if (csvData.length === 0) {
+            showToast('No data to upload', 'warning');
+            return;
+        }
+        
+        const btn = document.getElementById('csvUploadBtn');
+        const progress = document.getElementById('uploadProgress');
+        const progressBar = document.getElementById('uploadProgressBar');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Uploading...';
+        progress.style.display = 'block';
+        
+        let success = 0;
+        let failed = 0;
+        
+        for (let i = 0; i < csvData.length; i++) {
+            const row = csvData[i];
+            const progressPct = ((i + 1) / csvData.length * 100);
+            progressBar.style.width = `${progressPct}%`;
+            
+            try {
+                const data = {
+                    matric: row.matric,
+                    name: row.name,
+                    surname: row.surname,
+                    department: row.department_id,
+                    level: parseInt(row.level),
+                    email: row.email || '',
+                    phone: row.phone || ''
+                };
+                
+                await apiCall('/students', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                });
+                success++;
+            } catch (error) {
+                failed++;
+                console.error(`Failed to upload student ${i+1}:`, error);
+            }
+        }
+        
+        progressBar.style.width = '100%';
+        
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-upload me-1"></i> Upload Students';
+            progress.style.display = 'none';
+            
+            bootstrap.Modal.getInstance(document.getElementById('csvUploadModal')).hide();
+            showToast(`✅ ${success} students uploaded, ${failed} failed`, success > 0 ? 'success' : 'danger');
+            loadStudents();
+            loadDashboard();
+        }, 500);
     }
     
     // ========================================================
@@ -2076,6 +2375,15 @@
                 </tr>
             `).join('');
             
+            if ($.fn.DataTable.isDataTable('#coursesTable')) {
+                $('#coursesTable').DataTable().destroy();
+            }
+            $('#coursesTable').DataTable({
+                pageLength: 10,
+                order: [[0, 'asc']],
+                responsive: true
+            });
+            
         } catch (error) {
             body.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${error.message}</td></tr>`;
         }
@@ -2124,17 +2432,20 @@
     }
     
     function editCourse(code) {
-        const row = document.querySelector(`#coursesBody tr td:first-child:contains("${code}")`)?.parentElement;
-        if (row) {
+        const rows = document.querySelectorAll('#coursesBody tr');
+        for (const row of rows) {
             const cells = row.querySelectorAll('td');
-            openCourseModal({
-                code: cells[0].textContent.trim(),
-                name: cells[1].textContent.trim(),
-                department: cells[2].textContent.trim(),
-                lecturer: cells[3].textContent.trim(),
-                credits: parseInt(cells[4].textContent.trim()),
-                semester: parseInt(cells[5].textContent.trim().replace('Sem ', ''))
-            });
+            if (cells.length > 0 && cells[0].textContent.trim() === code) {
+                openCourseModal({
+                    code: cells[0].textContent.trim(),
+                    name: cells[1].textContent.trim(),
+                    department: cells[2].textContent.trim(),
+                    lecturer: cells[3].textContent.trim(),
+                    credits: parseInt(cells[4].textContent.trim()),
+                    semester: parseInt(cells[5].textContent.trim().replace('Sem ', ''))
+                });
+                break;
+            }
         }
     }
     
@@ -2221,6 +2532,15 @@
                 </tr>
             `).join('');
             
+            if ($.fn.DataTable.isDataTable('#hallsTable')) {
+                $('#hallsTable').DataTable().destroy();
+            }
+            $('#hallsTable').DataTable({
+                pageLength: 10,
+                order: [[0, 'asc']],
+                responsive: true
+            });
+            
         } catch (error) {
             body.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${error.message}</td></tr>`;
         }
@@ -2250,16 +2570,19 @@
     }
     
     function editHall(id) {
-        const row = document.querySelector(`#hallsBody tr td:first-child:contains("${id}")`)?.parentElement;
-        if (row) {
+        const rows = document.querySelectorAll('#hallsBody tr');
+        for (const row of rows) {
             const cells = row.querySelectorAll('td');
-            openHallModal({
-                id: cells[0].textContent.trim(),
-                name: cells[1].textContent.trim(),
-                capacity: parseInt(cells[2].textContent.trim()),
-                type: cells[3].textContent.trim(),
-                location: cells[4].textContent.trim() !== 'N/A' ? cells[4].textContent.trim() : ''
-            });
+            if (cells.length > 0 && cells[0].textContent.trim() === id) {
+                openHallModal({
+                    id: cells[0].textContent.trim(),
+                    name: cells[1].textContent.trim(),
+                    capacity: parseInt(cells[2].textContent.trim()),
+                    type: cells[3].textContent.trim(),
+                    location: cells[4].textContent.trim() !== 'N/A' ? cells[4].textContent.trim() : ''
+                });
+                break;
+            }
         }
     }
     
@@ -2358,6 +2681,15 @@
                 </tr>
             `).join('');
             
+            if ($.fn.DataTable.isDataTable('#examsTable')) {
+                $('#examsTable').DataTable().destroy();
+            }
+            $('#examsTable').DataTable({
+                pageLength: 10,
+                order: [[0, 'asc']],
+                responsive: true
+            });
+            
         } catch (error) {
             body.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${error.message}</td></tr>`;
         }
@@ -2388,17 +2720,20 @@
     }
     
     function editExam(id) {
-        const row = document.querySelector(`#examsBody tr td:first-child:contains("${id}")`)?.parentElement;
-        if (row) {
+        const rows = document.querySelectorAll('#examsBody tr');
+        for (const row of rows) {
             const cells = row.querySelectorAll('td');
-            openExamModal({
-                id: cells[0].textContent.trim(),
-                course: cells[1].textContent.trim(),
-                date: cells[2].textContent.trim(),
-                time: cells[3].textContent.trim(),
-                hall: cells[4].textContent.trim(),
-                duration: cells[5].textContent.trim()
-            });
+            if (cells.length > 0 && cells[0].textContent.trim() === id) {
+                openExamModal({
+                    id: cells[0].textContent.trim(),
+                    course: cells[1].textContent.trim(),
+                    date: cells[2].textContent.trim(),
+                    time: cells[3].textContent.trim(),
+                    hall: cells[4].textContent.trim(),
+                    duration: cells[5].textContent.trim()
+                });
+                break;
+            }
         }
     }
     
@@ -2583,23 +2918,6 @@
             showLoading(false);
         }
     }
-    
-    // ========================================================
-    // UTILITY - Contains selector for edit functions
-    // ========================================================
-    (function() {
-        const origQuery = document.querySelectorAll;
-        document.querySelectorAll = function(selector) {
-            if (selector.includes(':contains(')) {
-                const parts = selector.split(':contains(');
-                const tag = parts[0];
-                const text = parts[1].replace(/['")]/g, '');
-                const elements = document.querySelectorAll(tag);
-                return Array.from(elements).filter(el => el.textContent.trim() === text);
-            }
-            return origQuery.call(this, selector);
-        };
-    })();
 </script>
 </body>
 </html>
