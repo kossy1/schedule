@@ -857,957 +857,265 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
 <script>
-    // ========== GLOBALS ==========
-    const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-        ? 'http://localhost:5000/api'
-        : '/api';
+  // ========== GLOBALS ==========
+// Dynamic API URL - works on both local and Vercel
+const API_URL = (() => {
+    // Check if running on Vercel (production)
+    const hostname = window.location.hostname;
+    if (hostname !== 'localhost' && hostname !== '127.0.0.1' && !hostname.includes('127.0.0.1')) {
+        // For Vercel, use relative path
+        return '/api';
+    }
+    return 'http://localhost:5000/api';
+})();
+
+const ADMIN_API = `${API_URL}/admin`;
+
+console.log('🌐 API URL:', API_URL);
+
+// ========== TOAST ==========
+let toast = null;
+
+function showToast(message, type = 'success') {
+    const toastEl = document.getElementById('toastMessage');
+    const toastBody = document.getElementById('toastBody');
     
-    let token = localStorage.getItem('adminToken') || '';
-    let toast = null;
-    let currentSection = 'dashboard';
+    if (!toastEl) {
+        alert(message);
+        return;
+    }
     
-    // ========== INITIALIZATION ==========
-    document.addEventListener('DOMContentLoaded', function() {
-        toast = new bootstrap.Toast(document.getElementById('toastMessage'), { delay: 3000 });
+    const bgColors = {
+        success: 'bg-success',
+        danger: 'bg-danger',
+        warning: 'bg-warning text-dark',
+        info: 'bg-info text-dark'
+    };
+    
+    toastEl.className = `toast align-items-center text-white border-0 ${bgColors[type] || 'bg-success'}`;
+    toastBody.textContent = message;
+    
+    if (!toast) {
+        toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    }
+    toast.show();
+}
+
+// ========== API HELPER ==========
+async function apiCall(endpoint, options = {}) {
+    const url = endpoint.startsWith('http') ? endpoint : `${ADMIN_API}${endpoint}`;
+    const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+        ...(options.headers || {})
+    };
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            headers
+        });
         
-        // Check if already logged in
-        if (token) {
-            verifyToken();
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('❌ Non-JSON response:', text.substring(0, 200));
+            throw new Error('Server returned non-JSON response. Please check if the API is running.');
+        }
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || data.message || `HTTP ${response.status}`);
+        }
+        
+        return data;
+    } catch (error) {
+        console.error('❌ API Error:', error);
+        throw error;
+    }
+}
+
+// ========== AUTH ==========
+async function handleLogin(e) {
+    e.preventDefault();
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    const btn = document.getElementById('loginBtn');
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
+    
+    try {
+        const response = await fetch(`${ADMIN_API}/login`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password })
+        });
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Login response:', text.substring(0, 200));
+            throw new Error('Server returned HTML instead of JSON. Please check your deployment.');
+        }
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Login failed');
+        }
+        
+        token = data.token;
+        localStorage.setItem('adminToken', token);
+        
+        document.getElementById('adminUsername').textContent = data.user?.username || 'admin';
+        
+        showToast('✅ Login successful!', 'success');
+        
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboardPage').style.display = 'block';
+        
+        // Load dashboard data
+        loadDashboard();
+        
+    } catch (error) {
+        showToast('❌ ' + error.message, 'danger');
+        console.error('Login error:', error);
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+    }
+}
+
+// Test the API connection
+async function testApiConnection() {
+    try {
+        const response = await fetch(`${API_URL}/health`);
+        const data = await response.json();
+        console.log('✅ API Health:', data);
+        return true;
+    } catch (error) {
+        console.error('❌ API Connection Failed:', error);
+        return false;
+    }
+}
+
+// Call this on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize toast
+    const toastEl = document.getElementById('toastMessage');
+    if (toastEl) {
+        toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+    }
+    
+    // Test API connection
+    testApiConnection().then(connected => {
+        if (!connected) {
+            showToast('⚠️ Cannot connect to API. Please check your deployment.', 'warning');
         }
     });
     
-    // ========== TOAST ==========
-    function showToast(message, type = 'success') {
-        const toastEl = document.getElementById('toastMessage');
-        const toastBody = document.getElementById('toastBody');
-        
-        const bgColors = {
-            success: 'bg-success',
-            danger: 'bg-danger',
-            warning: 'bg-warning text-dark',
-            info: 'bg-info text-dark'
-        };
-        
-        toastEl.className = `toast align-items-center text-white border-0 ${bgColors[type] || 'bg-success'}`;
-        toastBody.textContent = message;
-        toast.show();
+    // Check if already logged in
+    token = localStorage.getItem('adminToken') || '';
+    if (token) {
+        verifyToken();
     }
+});
+
+// Update all other functions to use apiCall helper instead of direct fetch
+// Example for loadCourses:
+async function loadCourses() {
+    const body = document.getElementById('coursesBody');
+    body.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
     
-    // ========== AUTH ==========
-    async function handleLogin(e) {
-        e.preventDefault();
-        const username = document.getElementById('username').value;
-        const password = document.getElementById('password').value;
-        const btn = document.getElementById('loginBtn');
+    try {
+        const courses = await apiCall('/courses');
         
-        btn.disabled = true;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
-            
-            const data = await response.json();
-            
-            if (!response.ok) {
-                throw new Error(data.error || 'Login failed');
-            }
-            
-            token = data.token;
-            localStorage.setItem('adminToken', token);
-            
-            document.getElementById('adminUsername').textContent = data.user.username;
-            
-            showToast('✅ Login successful!', 'success');
-            
-            document.getElementById('loginPage').style.display = 'none';
-            document.getElementById('dashboardPage').style.display = 'block';
-            
-            // Load dashboard data
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        } finally {
-            btn.disabled = false;
-            btn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+        if (courses.length === 0) {
+            body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No courses found</td></tr>';
+            return;
         }
+        
+        body.innerHTML = courses.map(c => `
+            <tr>
+                <td><strong>${c.id}</strong></td>
+                <td>${c.name}</td>
+                <td>${c.lecturer}</td>
+                <td>Semester ${c.semester}</td>
+                <td class="actions">
+                    <button class="btn btn-sm btn-warning" onclick="editCourse('${c.id}')">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteCourse('${c.id}')">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </td>
+            </tr>
+        `).join('');
+        
+    } catch (error) {
+        body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
     }
-    
-    async function verifyToken() {
-        try {
-            const response = await fetch(`${API_URL}/admin/verify`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (response.ok) {
-                document.getElementById('loginPage').style.display = 'none';
-                document.getElementById('dashboardPage').style.display = 'block';
-                loadDashboard();
-            } else {
-                localStorage.removeItem('adminToken');
-                token = '';
-            }
-        } catch (error) {
-            localStorage.removeItem('adminToken');
-            token = '';
-        }
-    }
-    
-    function handleLogout() {
+}
+
+// Update verifyToken
+async function verifyToken() {
+    try {
+        const data = await apiCall('/verify');
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('dashboardPage').style.display = 'block';
+        loadDashboard();
+    } catch (error) {
         localStorage.removeItem('adminToken');
         token = '';
         document.getElementById('loginPage').style.display = 'flex';
         document.getElementById('dashboardPage').style.display = 'none';
-        showToast('👋 Logged out', 'info');
     }
-    
-    function toggleSidebar() {
-        document.getElementById('sidebar').classList.toggle('open');
+}
+
+// Update loadDashboard
+async function loadDashboard() {
+    try {
+        const stats = await apiCall('/stats');
+        
+        document.getElementById('statCourses').textContent = stats.courses || 0;
+        document.getElementById('statLecturers').textContent = stats.lecturers || 0;
+        document.getElementById('statHalls').textContent = stats.halls || 0;
+        document.getElementById('statExams').textContent = stats.exams || 0;
+        
+        document.getElementById('courseCountBadge').textContent = stats.courses || 0;
+        document.getElementById('lecturerCountBadge').textContent = stats.lecturers || 0;
+        document.getElementById('hallCountBadge').textContent = stats.halls || 0;
+        document.getElementById('examCountBadge').textContent = stats.exams || 0;
+        
+        const activity = document.getElementById('recentActivity');
+        activity.innerHTML = `
+            <div class="d-flex justify-content-between py-2 border-bottom">
+                <span><i class="fas fa-book text-primary me-2"></i>${stats.courses || 0} courses in system</span>
+                <small class="text-muted">Active</small>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+                <span><i class="fas fa-user-tie text-success me-2"></i>${stats.lecturers || 0} lecturers registered</span>
+                <small class="text-muted">Active</small>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+                <span><i class="fas fa-building text-warning me-2"></i>${stats.halls || 0} halls available</span>
+                <small class="text-muted">Active</small>
+            </div>
+            <div class="d-flex justify-content-between py-2">
+                <span><i class="fas fa-pencil-alt text-danger me-2"></i>${stats.exams || 0} exams scheduled</span>
+                <small class="text-muted">Active</small>
+            </div>
+        `;
+        
+    } catch (error) {
+        console.error('Error loading dashboard:', error);
+        showToast('Error loading dashboard: ' + error.message, 'danger');
     }
-    
-    // ========== SECTION NAVIGATION ==========
-    function showSection(section) {
-        currentSection = section;
-        
-        // Update nav
-        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-        document.querySelector(`.nav-item[data-section="${section}"]`)?.classList.add('active');
-        
-        // Update title
-        const titles = {
-            dashboard: 'Dashboard',
-            courses: 'Course Management',
-            lecturers: 'Lecturer Management',
-            halls: 'Hall Management',
-            exams: 'Exam Management',
-            timetable: 'Timetable Management'
-        };
-        document.getElementById('sectionTitle').textContent = titles[section] || section;
-        
-        // Hide all sections
-        document.querySelectorAll('[id^="section-"]').forEach(el => el.style.display = 'none');
-        
-        // Show selected section
-        document.getElementById(`section-${section}`).style.display = 'block';
-        
-        // Close sidebar on mobile
-        document.getElementById('sidebar').classList.remove('open');
-        
-        // Load data for section
-        if (section === 'dashboard') loadDashboard();
-        else if (section === 'courses') loadCourses();
-        else if (section === 'lecturers') loadLecturers();
-        else if (section === 'halls') loadHalls();
-        else if (section === 'exams') loadExams();
-        else if (section === 'timetable') loadTimetable();
-    }
-    
-    // ========== DASHBOARD ==========
-    async function loadDashboard() {
-        try {
-            const response = await fetch(`${API_URL}/admin/stats`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (!response.ok) throw new Error('Failed to load stats');
-            
-            const stats = await response.json();
-            
-            document.getElementById('statCourses').textContent = stats.courses || 0;
-            document.getElementById('statLecturers').textContent = stats.lecturers || 0;
-            document.getElementById('statHalls').textContent = stats.halls || 0;
-            document.getElementById('statExams').textContent = stats.exams || 0;
-            
-            document.getElementById('courseCountBadge').textContent = stats.courses || 0;
-            document.getElementById('lecturerCountBadge').textContent = stats.lecturers || 0;
-            document.getElementById('hallCountBadge').textContent = stats.halls || 0;
-            document.getElementById('examCountBadge').textContent = stats.exams || 0;
-            
-            // Recent activity
-            const activity = document.getElementById('recentActivity');
-            activity.innerHTML = `
-                <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span><i class="fas fa-book text-primary me-2"></i>${stats.courses || 0} courses in system</span>
-                    <small class="text-muted">Active</small>
-                </div>
-                <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span><i class="fas fa-user-tie text-success me-2"></i>${stats.lecturers || 0} lecturers registered</span>
-                    <small class="text-muted">Active</small>
-                </div>
-                <div class="d-flex justify-content-between py-2 border-bottom">
-                    <span><i class="fas fa-building text-warning me-2"></i>${stats.halls || 0} halls available</span>
-                    <small class="text-muted">Active</small>
-                </div>
-                <div class="d-flex justify-content-between py-2">
-                    <span><i class="fas fa-pencil-alt text-danger me-2"></i>${stats.exams || 0} exams scheduled</span>
-                    <small class="text-muted">Active</small>
-                </div>
-            `;
-            
-        } catch (error) {
-            showToast('❌ Error loading stats: ' + error.message, 'danger');
-        }
-    }
-    
-    // ========== COURSES ==========
-    async function loadCourses() {
-        const body = document.getElementById('coursesBody');
-        body.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/courses`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (!response.ok) throw new Error('Failed to load courses');
-            
-            const courses = await response.json();
-            
-            if (courses.length === 0) {
-                body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No courses found</td></tr>';
-                return;
-            }
-            
-            body.innerHTML = courses.map(c => `
-                <tr>
-                    <td><strong>${c.id}</strong></td>
-                    <td>${c.name}</td>
-                    <td>${c.lecturer}</td>
-                    <td>Semester ${c.semester}</td>
-                    <td class="actions">
-                        <button class="btn btn-sm btn-warning" onclick="editCourse('${c.id}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteCourse('${c.id}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-            
-        } catch (error) {
-            body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
-        }
-    }
-    
-    function openCourseModal(data = null) {
-        document.getElementById('courseForm').reset();
-        document.getElementById('courseEditId').value = '';
-        document.getElementById('courseModalTitle').textContent = 'Add Course';
-        
-        if (data) {
-            document.getElementById('courseEditId').value = data.id;
-            document.getElementById('courseId').value = data.id;
-            document.getElementById('courseId').disabled = true;
-            document.getElementById('courseName').value = data.name;
-            document.getElementById('courseLecturer').value = data.lecturer;
-            document.getElementById('courseSemester').value = data.semester;
-            document.getElementById('courseModalTitle').textContent = 'Edit Course';
-        } else {
-            document.getElementById('courseId').disabled = false;
-        }
-        
-        new bootstrap.Modal(document.getElementById('courseModal')).show();
-    }
-    
-    function editCourse(id) {
-        // Find course in table
-        const row = document.querySelector(`#coursesBody tr td:first-child:contains("${id}")`)?.parentElement;
-        if (row) {
-            const cells = row.querySelectorAll('td');
-            openCourseModal({
-                id: cells[0].textContent.trim(),
-                name: cells[1].textContent.trim(),
-                lecturer: cells[2].textContent.trim(),
-                semester: parseInt(cells[3].textContent.replace('Semester ', ''))
-            });
-        }
-    }
-    
-    async function saveCourse() {
-        const id = document.getElementById('courseId').value;
-        const name = document.getElementById('courseName').value;
-        const lecturer = document.getElementById('courseLecturer').value;
-        const semester = parseInt(document.getElementById('courseSemester').value);
-        const editId = document.getElementById('courseEditId').value;
-        
-        if (!id || !name || !lecturer) {
-            showToast('Please fill all fields', 'warning');
-            return;
-        }
-        
-        const data = { id, name, lecturer, semester };
-        const url = editId ? `${API_URL}/admin/courses/${editId}` : `${API_URL}/admin/courses`;
-        const method = editId ? 'PUT' : 'POST';
-        
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to save');
-            
-            showToast(result.message || 'Course saved successfully!', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('courseModal')).hide();
-            loadCourses();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    async function deleteCourse(id) {
-        if (!confirm(`Delete course ${id}?`)) return;
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/courses/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to delete');
-            
-            showToast(result.message || 'Course deleted!', 'success');
-            loadCourses();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    // ========== LECTURERS ==========
-    async function loadLecturers() {
-        const body = document.getElementById('lecturersBody');
-        body.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/lecturers`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (!response.ok) throw new Error('Failed to load lecturers');
-            
-            const lecturers = await response.json();
-            
-            if (lecturers.length === 0) {
-                body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No lecturers found</td></tr>';
-                return;
-            }
-            
-            body.innerHTML = lecturers.map(l => `
-                <tr>
-                    <td><strong>${l.id}</strong></td>
-                    <td>${l.name}</td>
-                    <td>${l.department}</td>
-                    <td>${l.email}</td>
-                    <td class="actions">
-                        <button class="btn btn-sm btn-warning" onclick="editLecturer('${l.id}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteLecturer('${l.id}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-            
-        } catch (error) {
-            body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
-        }
-    }
-    
-    function openLecturerModal(data = null) {
-        document.getElementById('lecturerForm').reset();
-        document.getElementById('lecturerEditId').value = '';
-        document.getElementById('lecturerModalTitle').textContent = 'Add Lecturer';
-        
-        if (data) {
-            document.getElementById('lecturerEditId').value = data.id;
-            document.getElementById('lecturerId').value = data.id;
-            document.getElementById('lecturerId').disabled = true;
-            document.getElementById('lecturerName').value = data.name;
-            document.getElementById('lecturerDept').value = data.department;
-            document.getElementById('lecturerEmail').value = data.email;
-            document.getElementById('lecturerModalTitle').textContent = 'Edit Lecturer';
-        } else {
-            document.getElementById('lecturerId').disabled = false;
-        }
-        
-        new bootstrap.Modal(document.getElementById('lecturerModal')).show();
-    }
-    
-    function editLecturer(id) {
-        const row = document.querySelector(`#lecturersBody tr td:first-child:contains("${id}")`)?.parentElement;
-        if (row) {
-            const cells = row.querySelectorAll('td');
-            openLecturerModal({
-                id: cells[0].textContent.trim(),
-                name: cells[1].textContent.trim(),
-                department: cells[2].textContent.trim(),
-                email: cells[3].textContent.trim()
-            });
-        }
-    }
-    
-    async function saveLecturer() {
-        const id = document.getElementById('lecturerId').value;
-        const name = document.getElementById('lecturerName').value;
-        const department = document.getElementById('lecturerDept').value;
-        const email = document.getElementById('lecturerEmail').value;
-        const editId = document.getElementById('lecturerEditId').value;
-        
-        if (!id || !name || !department || !email) {
-            showToast('Please fill all fields', 'warning');
-            return;
-        }
-        
-        const data = { id, name, department, email };
-        const url = editId ? `${API_URL}/admin/lecturers/${editId}` : `${API_URL}/admin/lecturers`;
-        const method = editId ? 'PUT' : 'POST';
-        
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to save');
-            
-            showToast(result.message || 'Lecturer saved!', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('lecturerModal')).hide();
-            loadLecturers();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    async function deleteLecturer(id) {
-        if (!confirm(`Delete lecturer ${id}?`)) return;
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/lecturers/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to delete');
-            
-            showToast('Lecturer deleted!', 'success');
-            loadLecturers();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    // ========== HALLS ==========
-    async function loadHalls() {
-        const body = document.getElementById('hallsBody');
-        body.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/halls`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (!response.ok) throw new Error('Failed to load halls');
-            
-            const halls = await response.json();
-            
-            if (halls.length === 0) {
-                body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No halls found</td></tr>';
-                return;
-            }
-            
-            body.innerHTML = halls.map(h => `
-                <tr>
-                    <td><strong>${h.id}</strong></td>
-                    <td>${h.name}</td>
-                    <td>${h.capacity}</td>
-                    <td><span class="badge bg-info">${h.type}</span></td>
-                    <td class="actions">
-                        <button class="btn btn-sm btn-warning" onclick="editHall('${h.id}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteHall('${h.id}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-            
-        } catch (error) {
-            body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
-        }
-    }
-    
-    function openHallModal(data = null) {
-        document.getElementById('hallForm').reset();
-        document.getElementById('hallEditId').value = '';
-        document.getElementById('hallModalTitle').textContent = 'Add Hall';
-        
-        if (data) {
-            document.getElementById('hallEditId').value = data.id;
-            document.getElementById('hallId').value = data.id;
-            document.getElementById('hallId').disabled = true;
-            document.getElementById('hallName').value = data.name;
-            document.getElementById('hallCapacity').value = data.capacity;
-            document.getElementById('hallType').value = data.type;
-            document.getElementById('hallModalTitle').textContent = 'Edit Hall';
-        } else {
-            document.getElementById('hallId').disabled = false;
-        }
-        
-        new bootstrap.Modal(document.getElementById('hallModal')).show();
-    }
-    
-    function editHall(id) {
-        const row = document.querySelector(`#hallsBody tr td:first-child:contains("${id}")`)?.parentElement;
-        if (row) {
-            const cells = row.querySelectorAll('td');
-            openHallModal({
-                id: cells[0].textContent.trim(),
-                name: cells[1].textContent.trim(),
-                capacity: parseInt(cells[2].textContent.trim()),
-                type: cells[3].textContent.trim()
-            });
-        }
-    }
-    
-    async function saveHall() {
-        const id = document.getElementById('hallId').value;
-        const name = document.getElementById('hallName').value;
-        const capacity = parseInt(document.getElementById('hallCapacity').value);
-        const type = document.getElementById('hallType').value;
-        const editId = document.getElementById('hallEditId').value;
-        
-        if (!id || !name || !capacity || !type) {
-            showToast('Please fill all fields', 'warning');
-            return;
-        }
-        
-        const data = { id, name, capacity, type };
-        const url = editId ? `${API_URL}/admin/halls/${editId}` : `${API_URL}/admin/halls`;
-        const method = editId ? 'PUT' : 'POST';
-        
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to save');
-            
-            showToast(result.message || 'Hall saved!', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('hallModal')).hide();
-            loadHalls();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    async function deleteHall(id) {
-        if (!confirm(`Delete hall ${id}?`)) return;
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/halls/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to delete');
-            
-            showToast('Hall deleted!', 'success');
-            loadHalls();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    // ========== EXAMS ==========
-    async function loadExams() {
-        const body = document.getElementById('examsBody');
-        body.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
-        
-        // Populate dropdowns
-        try {
-            const coursesRes = await fetch(`${API_URL}/admin/courses`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const courses = await coursesRes.json();
-            const courseSelect = document.getElementById('examCourse');
-            courseSelect.innerHTML = courses.map(c => 
-                `<option value="${c.id}">${c.id} - ${c.name}</option>`
-            ).join('');
-        } catch (e) {}
-        
-        try {
-            const hallsRes = await fetch(`${API_URL}/admin/halls`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            const halls = await hallsRes.json();
-            const hallSelect = document.getElementById('examHall');
-            hallSelect.innerHTML = halls.map(h => 
-                `<option value="${h.id}">${h.name} (${h.type})</option>`
-            ).join('');
-        } catch (e) {}
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/exams`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (!response.ok) throw new Error('Failed to load exams');
-            
-            const exams = await response.json();
-            
-            if (exams.length === 0) {
-                body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No exams scheduled</td></tr>';
-                return;
-            }
-            
-            body.innerHTML = exams.map(e => `
-                <tr>
-                    <td><strong>${e.id}</strong></td>
-                    <td>${e.course}</td>
-                    <td>${e.date}</td>
-                    <td>${e.time}</td>
-                    <td>${e.hall}</td>
-                    <td>${e.duration || '2 hours'}</td>
-                    <td class="actions">
-                        <button class="btn btn-sm btn-warning" onclick="editExam('${e.id}')">
-                            <i class="fas fa-edit"></i>
-                        </button>
-                        <button class="btn btn-sm btn-danger" onclick="deleteExam('${e.id}')">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </td>
-                </tr>
-            `).join('');
-            
-        } catch (error) {
-            body.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${error.message}</td></tr>`;
-        }
-    }
-    
-    function openExamModal(data = null) {
-        document.getElementById('examForm').reset();
-        document.getElementById('examEditId').value = '';
-        document.getElementById('examModalTitle').textContent = 'Add Exam';
-        
-        if (data) {
-            document.getElementById('examEditId').value = data.id;
-            document.getElementById('examId').value = data.id;
-            document.getElementById('examId').disabled = true;
-            document.getElementById('examCourse').value = data.course;
-            document.getElementById('examDate').value = data.date;
-            document.getElementById('examTime').value = data.time;
-            document.getElementById('examHall').value = data.hall;
-            document.getElementById('examDuration').value = data.duration || '2 hours';
-            document.getElementById('examModalTitle').textContent = 'Edit Exam';
-        } else {
-            document.getElementById('examId').disabled = false;
-        }
-        
-        new bootstrap.Modal(document.getElementById('examModal')).show();
-    }
-    
-    function editExam(id) {
-        const row = document.querySelector(`#examsBody tr td:first-child:contains("${id}")`)?.parentElement;
-        if (row) {
-            const cells = row.querySelectorAll('td');
-            openExamModal({
-                id: cells[0].textContent.trim(),
-                course: cells[1].textContent.trim(),
-                date: cells[2].textContent.trim(),
-                time: cells[3].textContent.trim(),
-                hall: cells[4].textContent.trim(),
-                duration: cells[5].textContent.trim()
-            });
-        }
-    }
-    
-    async function saveExam() {
-        const id = document.getElementById('examId').value;
-        const course = document.getElementById('examCourse').value;
-        const date = document.getElementById('examDate').value;
-        const time = document.getElementById('examTime').value;
-        const hall = document.getElementById('examHall').value;
-        const duration = document.getElementById('examDuration').value;
-        const editId = document.getElementById('examEditId').value;
-        
-        if (!id || !course || !date || !time || !hall) {
-            showToast('Please fill all fields', 'warning');
-            return;
-        }
-        
-        const data = { id, course, date, time, hall, duration };
-        const url = editId ? `${API_URL}/admin/exams/${editId}` : `${API_URL}/admin/exams`;
-        const method = editId ? 'PUT' : 'POST';
-        
-        try {
-            const response = await fetch(url, {
-                method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify(data)
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to save');
-            
-            showToast(result.message || 'Exam saved!', 'success');
-            bootstrap.Modal.getInstance(document.getElementById('examModal')).hide();
-            loadExams();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    async function deleteExam(id) {
-        if (!confirm(`Delete exam ${id}?`)) return;
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/exams/${id}`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to delete');
-            
-            showToast('Exam deleted!', 'success');
-            loadExams();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    async function generateExams() {
-        if (!confirm('Generate exam schedule automatically?')) return;
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/exams/generate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                }
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to generate');
-            
-            showToast('✅ Exam schedule generated!', 'success');
-            loadExams();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    // ========== TIMETABLE ==========
-    async function loadTimetable() {
-        const display = document.getElementById('timetableDisplay');
-        display.innerHTML = '<p class="text-muted text-center py-4">Loading...</p>';
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/timetable/latest`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            if (response.status === 404) {
-                display.innerHTML = '<p class="text-muted text-center py-4">No timetable generated. Click "Generate" to create one.</p>';
-                return;
-            }
-            
-            if (!response.ok) throw new Error('Failed to load timetable');
-            
-            const data = await response.json();
-            
-            if (!data.schedule || data.schedule.length === 0) {
-                display.innerHTML = '<p class="text-muted text-center py-4">Empty timetable</p>';
-                return;
-            }
-            
-            // Group by day
-            const grouped = data.schedule.reduce((acc, item) => {
-                const day = item.day || 'Unknown';
-                if (!acc[day]) acc[day] = [];
-                acc[day].push(item);
-                return acc;
-            }, {});
-            
-            let html = `
-                <div class="mb-3">
-                    <span class="badge bg-success">Fitness Score: ${data.fitness_score || 0}</span>
-                    <span class="badge bg-info ms-2">${data.schedule.length} sessions</span>
-                    <small class="text-muted ms-2">Generated: ${data.generated_at || 'N/A'}</small>
-                </div>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <thead>
-                            <tr>
-                                <th>Day</th>
-                                <th>Time</th>
-                                <th>Course</th>
-                                <th>Lecturer</th>
-                                <th>Venue</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-            `;
-            
-            const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-            for (const day of daysOrder) {
-                if (grouped[day]) {
-                    grouped[day].sort((a, b) => a.time.localeCompare(b.time));
-                    grouped[day].forEach(item => {
-                        html += `
-                            <tr>
-                                <td>${day}</td>
-                                <td>${item.time}</td>
-                                <td><strong>${item.course}</strong></td>
-                                <td>${item.lecturer}</td>
-                                <td>${item.venue}</td>
-                            </tr>
-                        `;
-                    });
-                }
-            }
-            
-            html += `
-                        </tbody>
-                    </table>
-                </div>
-            `;
-            
-            display.innerHTML = html;
-            
-        } catch (error) {
-            display.innerHTML = `<p class="text-danger text-center py-4">${error.message}</p>`;
-        }
-    }
-    
-    async function generateTimetable() {
-        const display = document.getElementById('timetableDisplay');
-        display.innerHTML = '<p class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Generating timetable...</p>';
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/timetable/generate`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                    days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-                    slots: ['8-9', '9-10', '10-11', '11-12', '12-1', '2-3', '3-4', '4-5']
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to generate');
-            
-            showToast('✅ Timetable generated!', 'success');
-            loadTimetable();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-            loadTimetable();
-        }
-    }
-    
-    async function deleteTimetable() {
-        if (!confirm('Delete all timetables?')) return;
-        
-        try {
-            const response = await fetch(`${API_URL}/admin/timetable`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            
-            const result = await response.json();
-            
-            if (!response.ok) throw new Error(result.error || 'Failed to delete');
-            
-            showToast(result.message || 'Timetables cleared!', 'success');
-            loadTimetable();
-            loadDashboard();
-            
-        } catch (error) {
-            showToast('❌ ' + error.message, 'danger');
-        }
-    }
-    
-    // ========== UTILITY ==========
-    // Text contains selector for jQuery-like functionality
-    if (!Element.prototype.matches) {
-        Element.prototype.matches = Element.prototype.msMatchesSelector || 
-                                   Element.prototype.webkitMatchesSelector;
-    }
-    
-    // Simple contains selector for edit functions
-    document.querySelectorAll = function(selector) {
-        if (selector.includes(':contains(')) {
-            const parts = selector.split(':contains(');
-            const tag = parts[0];
-            const text = parts[1].replace('")', '').replace('"', '');
-            const elements = document.querySelectorAll(tag);
-            return Array.from(elements).filter(el => el.textContent.trim() === text);
-        }
-        return document.querySelectorAll(selector);
-    };
+}
 </script>
 </body>
 </html>
