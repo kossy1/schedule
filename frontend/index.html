@@ -264,6 +264,7 @@
             color: var(--text-light);
             position: relative;
             overflow: hidden;
+            display: block;
         }
         
         .login-card::before {
@@ -283,6 +284,7 @@
             transform: translateY(-8px);
             border-color: var(--secondary);
             box-shadow: 0 15px 40px rgba(230, 179, 30, 0.15);
+            color: var(--text-light);
         }
         
         .login-card:hover::before {
@@ -314,6 +316,7 @@
             margin-bottom: 5px;
             position: relative;
             z-index: 1;
+            color: var(--text-light);
         }
         
         .login-card p {
@@ -483,6 +486,28 @@
             color: var(--text-muted);
         }
         
+        /* ========== FOOTER ========== */
+        .footer {
+            background: rgba(0,0,0,0.3);
+            padding: 20px 0;
+            border-top: 1px solid rgba(255,255,255,0.05);
+        }
+        
+        .footer p {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+        
+        .footer a {
+            color: var(--secondary);
+            text-decoration: none;
+        }
+        
+        .footer a:hover {
+            text-decoration: underline;
+        }
+        
         /* ========== RESPONSIVE ========== */
         @media (max-width: 992px) {
             .hero-content h1 {
@@ -586,28 +611,6 @@
         .animate-on-scroll.visible {
             opacity: 1;
             transform: translateY(0);
-        }
-        
-        /* ========== FOOTER ========== */
-        .footer {
-            background: rgba(0,0,0,0.3);
-            padding: 20px 0;
-            border-top: 1px solid rgba(255,255,255,0.05);
-        }
-        
-        .footer p {
-            margin: 0;
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-        
-        .footer a {
-            color: var(--secondary);
-            text-decoration: none;
-        }
-        
-        .footer a:hover {
-            text-decoration: underline;
         }
     </style>
 </head>
@@ -885,6 +888,11 @@
             
             if (!response.ok) {
                 console.warn('Stats API not available, using default values');
+                // Set default values
+                document.getElementById('statCourses').textContent = '120+';
+                document.getElementById('statStudents').textContent = '5,000+';
+                document.getElementById('statLecturers').textContent = '200+';
+                document.getElementById('statDepartments').textContent = '15+';
                 return;
             }
             
