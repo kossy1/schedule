@@ -1,0 +1,4 @@
+matric,name,surname,department_id,level,email,phone
+HND/CSC/2024/001,John,Doe,CSC,100,john@email.com,08012345678
+HND/ENG/2024/001,Jane,Smith,ENG,200,jane@email.com,08087654321
+HND/MTH/2024/001,Bob,Johnson,MTH,300,bob@email.com,08011223344

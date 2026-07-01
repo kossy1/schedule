@@ -15,6 +15,14 @@
     {
       "src": "frontend/admin.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "frontend/student.html",
+      "use": "@vercel/static"
+    },
+    {
+      "src": "frontend/lecturer.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -25,6 +33,14 @@
     {
       "src": "/admin",
       "dest": "frontend/admin.html"
+    },
+    {
+      "src": "/student",
+      "dest": "frontend/student.html"
+    },
+    {
+      "src": "/lecturer",
+      "dest": "frontend/lecturer.html"
     },
     {
       "src": "/",
