@@ -1,0 +1,1813 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - The Polytechnic Ibadan</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    <style>
+        :root {
+            --primary: #1a3a5c;
+            --primary-light: #2a5a8c;
+            --secondary: #e6b31e;
+            --sidebar-width: 260px;
+        }
+        
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f2f5;
+            overflow-x: hidden;
+        }
+        
+        /* Login Page */
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            padding: 20px;
+        }
+        
+        .login-box {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 420px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            animation: slideUp 0.5s ease;
+        }
+        
+        .login-box .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .login-box .logo i {
+            font-size: 3rem;
+            color: var(--secondary);
+            background: var(--primary);
+            padding: 20px;
+            border-radius: 50%;
+        }
+        
+        .login-box .logo h3 {
+            margin-top: 15px;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        
+        .login-box .logo p {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .login-box .form-control {
+            border-radius: 12px;
+            padding: 12px 16px;
+            border: 2px solid #e2e8f0;
+        }
+        
+        .login-box .form-control:focus {
+            border-color: var(--secondary);
+            box-shadow: 0 0 0 3px rgba(230, 179, 30, 0.2);
+        }
+        
+        .login-box .btn-login {
+            background: linear-gradient(135deg, var(--primary), var(--primary-light));
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            font-weight: 600;
+            width: 100%;
+            transition: all 0.3s;
+        }
+        
+        .login-box .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(26, 58, 92, 0.3);
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Dashboard */
+        .dashboard-container {
+            display: none;
+        }
+        
+        .sidebar {
+            position: fixed;
+            left: 0;
+            top: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background: var(--primary);
+            color: white;
+            padding: 20px 0;
+            overflow-y: auto;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+        }
+        
+        .sidebar .brand {
+            padding: 0 20px 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .sidebar .brand h5 {
+            color: var(--secondary);
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .sidebar .brand small {
+            color: rgba(255,255,255,0.6);
+            font-size: 0.7rem;
+        }
+        
+        .sidebar .nav-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+            color: rgba(255,255,255,0.7);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .sidebar .nav-item:hover {
+            background: rgba(255,255,255,0.05);
+            color: white;
+        }
+        
+        .sidebar .nav-item.active {
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--secondary);
+            color: white;
+        }
+        
+        .sidebar .nav-item i {
+            width: 20px;
+            text-align: center;
+        }
+        
+        .sidebar .nav-item .badge {
+            margin-left: auto;
+            background: var(--secondary);
+            color: var(--primary);
+        }
+        
+        .sidebar .logout-btn {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 12px;
+            background: rgba(255,255,255,0.1);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+        
+        .sidebar .logout-btn:hover {
+            background: rgba(220, 53, 69, 0.3);
+        }
+        
+        .main-content {
+            margin-left: var(--sidebar-width);
+            padding: 20px;
+            min-height: 100vh;
+        }
+        
+        .top-bar {
+            background: white;
+            padding: 15px 25px;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .top-bar h4 {
+            margin: 0;
+            color: var(--primary);
+        }
+        
+        .top-bar .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .top-bar .user-info .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            font-weight: 700;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card .number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        .stat-card .label {
+            color: #6c757d;
+            font-size: 0.85rem;
+        }
+        
+        .stat-card .icon {
+            float: right;
+            font-size: 2.5rem;
+            opacity: 0.2;
+            color: var(--primary);
+        }
+        
+        .content-panel {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+        
+        .content-panel .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        
+        .content-panel .panel-header h5 {
+            margin: 0;
+            color: var(--primary);
+        }
+        
+        .btn-sm-custom {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        .table thead th {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            white-space: nowrap;
+        }
+        
+        .table tbody td {
+            padding: 10px 15px;
+            vertical-align: middle;
+        }
+        
+        .table .actions .btn {
+            padding: 4px 8px;
+            font-size: 0.75rem;
+            margin: 0 2px;
+        }
+        
+        .modal-content {
+            border-radius: 16px;
+        }
+        
+        .modal-header {
+            background: var(--primary);
+            color: white;
+            border-radius: 16px 16px 0 0;
+        }
+        
+        .modal-header .btn-close {
+            filter: brightness(0) invert(1);
+        }
+        
+        /* Mobile Toggle */
+        .sidebar-toggle {
+            display: none;
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            color: var(--primary);
+            cursor: pointer;
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            
+            .main-content {
+                margin-left: 0;
+            }
+            
+            .sidebar-toggle {
+                display: block;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .login-box {
+                padding: 25px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .stat-card .number {
+                font-size: 1.5rem;
+            }
+            
+            .top-bar {
+                padding: 12px 15px;
+            }
+            
+            .content-panel {
+                padding: 12px;
+            }
+        }
+        
+        /* Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        }
+        
+        /* Modal backdrop fix */
+        .modal-backdrop {
+            z-index: 1040;
+        }
+        
+        .modal {
+            z-index: 1050;
+        }
+    </style>
+</head>
+<body>
+
+<!-- ========== LOGIN PAGE ========== -->
+<div id="loginPage" class="login-container">
+    <div class="login-box">
+        <div class="logo">
+            <i class="fas fa-university"></i>
+            <h3>Admin Panel</h3>
+            <p>The Polytechnic, Ibadan</p>
+        </div>
+        <form id="loginForm" onsubmit="handleLogin(event)">
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Username</label>
+                <input type="text" class="form-control" id="username" value="admin" required>
+            </div>
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Password</label>
+                <input type="password" class="form-control" id="password" value="admin123" required>
+            </div>
+            <button type="submit" class="btn-login" id="loginBtn">
+                <i class="fas fa-sign-in-alt me-2"></i>Login
+            </button>
+            <div class="text-center mt-3">
+                <small class="text-muted">Default: admin / admin123</small>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========== DASHBOARD ========== -->
+<div id="dashboardPage" class="dashboard-container">
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="brand">
+            <h5><i class="fas fa-university me-2"></i>Polytechnic</h5>
+            <small>Administration Panel</small>
+        </div>
+        
+        <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
+            <i class="fas fa-chart-pie"></i> Dashboard
+        </div>
+        <div class="nav-item" data-section="courses" onclick="showSection('courses')">
+            <i class="fas fa-book"></i> Courses
+            <span class="badge" id="courseCountBadge">0</span>
+        </div>
+        <div class="nav-item" data-section="lecturers" onclick="showSection('lecturers')">
+            <i class="fas fa-user-tie"></i> Lecturers
+            <span class="badge" id="lecturerCountBadge">0</span>
+        </div>
+        <div class="nav-item" data-section="halls" onclick="showSection('halls')">
+            <i class="fas fa-building"></i> Halls
+            <span class="badge" id="hallCountBadge">0</span>
+        </div>
+        <div class="nav-item" data-section="exams" onclick="showSection('exams')">
+            <i class="fas fa-pencil-alt"></i> Exams
+            <span class="badge" id="examCountBadge">0</span>
+        </div>
+        <div class="nav-item" data-section="timetable" onclick="showSection('timetable')">
+            <i class="fas fa-calendar-alt"></i> Timetable
+        </div>
+        
+        <button class="logout-btn" onclick="handleLogout()">
+            <i class="fas fa-sign-out-alt me-2"></i>Logout
+        </button>
+    </div>
+    
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Top Bar -->
+        <div class="top-bar">
+            <div>
+                <button class="sidebar-toggle" onclick="toggleSidebar()">
+                    <i class="fas fa-bars"></i>
+                </button>
+                <h4 id="sectionTitle">Dashboard</h4>
+            </div>
+            <div class="user-info">
+                <span class="text-muted" id="adminUsername">admin</span>
+                <div class="avatar">A</div>
+            </div>
+        </div>
+        
+        <!-- Dashboard Section -->
+        <div id="section-dashboard">
+            <div class="stats-grid" id="statsGrid">
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-book"></i></div>
+                    <div class="number" id="statCourses">0</div>
+                    <div class="label">Total Courses</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-user-tie"></i></div>
+                    <div class="number" id="statLecturers">0</div>
+                    <div class="label">Total Lecturers</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-building"></i></div>
+                    <div class="number" id="statHalls">0</div>
+                    <div class="label">Total Halls</div>
+                </div>
+                <div class="stat-card">
+                    <div class="icon"><i class="fas fa-pencil-alt"></i></div>
+                    <div class="number" id="statExams">0</div>
+                    <div class="label">Total Exams</div>
+                </div>
+            </div>
+            
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h5><i class="fas fa-clock me-2"></i>Recent Activity</h5>
+                </div>
+                <div id="recentActivity">
+                    <p class="text-muted text-center py-4">Loading activity...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Courses Section -->
+        <div id="section-courses" style="display:none;">
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h5><i class="fas fa-book me-2"></i>Course Management</h5>
+                    <button class="btn btn-primary btn-sm-custom" onclick="openCourseModal()">
+                        <i class="fas fa-plus"></i> Add Course
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="coursesTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Lecturer</th>
+                                <th>Semester</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="coursesBody">
+                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Lecturers Section -->
+        <div id="section-lecturers" style="display:none;">
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h5><i class="fas fa-user-tie me-2"></i>Lecturer Management</h5>
+                    <button class="btn btn-primary btn-sm-custom" onclick="openLecturerModal()">
+                        <i class="fas fa-plus"></i> Add Lecturer
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="lecturersTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Department</th>
+                                <th>Email</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="lecturersBody">
+                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Halls Section -->
+        <div id="section-halls" style="display:none;">
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h5><i class="fas fa-building me-2"></i>Hall Management</h5>
+                    <button class="btn btn-primary btn-sm-custom" onclick="openHallModal()">
+                        <i class="fas fa-plus"></i> Add Hall
+                    </button>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="hallsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Name</th>
+                                <th>Capacity</th>
+                                <th>Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hallsBody">
+                            <tr><td colspan="5" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Exams Section -->
+        <div id="section-exams" style="display:none;">
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h5><i class="fas fa-pencil-alt me-2"></i>Exam Management</h5>
+                    <div>
+                        <button class="btn btn-success btn-sm-custom me-1" onclick="generateExams()">
+                            <i class="fas fa-sync-alt"></i> Generate
+                        </button>
+                        <button class="btn btn-primary btn-sm-custom" onclick="openExamModal()">
+                            <i class="fas fa-plus"></i> Add Exam
+                        </button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover" id="examsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Course</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th>Hall</th>
+                                <th>Duration</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="examsBody">
+                            <tr><td colspan="7" class="text-center">Loading...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Timetable Section -->
+        <div id="section-timetable" style="display:none;">
+            <div class="content-panel">
+                <div class="panel-header">
+                    <h5><i class="fas fa-calendar-alt me-2"></i>Timetable Management</h5>
+                    <div>
+                        <button class="btn btn-success btn-sm-custom me-1" onclick="generateTimetable()">
+                            <i class="fas fa-sync-alt"></i> Generate
+                        </button>
+                        <button class="btn btn-danger btn-sm-custom" onclick="deleteTimetable()">
+                            <i class="fas fa-trash"></i> Clear
+                        </button>
+                    </div>
+                </div>
+                <div id="timetableDisplay">
+                    <p class="text-muted text-center py-4">No timetable generated. Click "Generate" to create one.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ========== MODALS ========== -->
+
+<!-- Course Modal -->
+<div class="modal fade" id="courseModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="courseModalTitle">Add Course</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="courseForm">
+                    <input type="hidden" id="courseEditId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Course ID</label>
+                        <input type="text" class="form-control" id="courseId" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Course Name</label>
+                        <input type="text" class="form-control" id="courseName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Lecturer</label>
+                        <input type="text" class="form-control" id="courseLecturer" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Semester</label>
+                        <select class="form-control" id="courseSemester" required>
+                            <option value="1">Semester 1</option>
+                            <option value="2">Semester 2</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveCourse()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Lecturer Modal -->
+<div class="modal fade" id="lecturerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="lecturerModalTitle">Add Lecturer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="lecturerForm">
+                    <input type="hidden" id="lecturerEditId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Lecturer ID</label>
+                        <input type="text" class="form-control" id="lecturerId" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Full Name</label>
+                        <input type="text" class="form-control" id="lecturerName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Department</label>
+                        <input type="text" class="form-control" id="lecturerDept" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Email</label>
+                        <input type="email" class="form-control" id="lecturerEmail" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveLecturer()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hall Modal -->
+<div class="modal fade" id="hallModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="hallModalTitle">Add Hall</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="hallForm">
+                    <input type="hidden" id="hallEditId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Hall ID</label>
+                        <input type="text" class="form-control" id="hallId" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Hall Name</label>
+                        <input type="text" class="form-control" id="hallName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Capacity</label>
+                        <input type="number" class="form-control" id="hallCapacity" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Type</label>
+                        <select class="form-control" id="hallType" required>
+                            <option value="Lecture">Lecture Hall</option>
+                            <option value="Lab">Laboratory</option>
+                            <option value="Seminar">Seminar Room</option>
+                            <option value="Exam">Exam Hall</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveHall()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Exam Modal -->
+<div class="modal fade" id="examModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="examModalTitle">Add Exam</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="examForm">
+                    <input type="hidden" id="examEditId">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Exam ID</label>
+                        <input type="text" class="form-control" id="examId" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Course</label>
+                        <select class="form-control" id="examCourse" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Date</label>
+                        <select class="form-control" id="examDate" required>
+                            <option value="Monday">Monday</option>
+                            <option value="Tuesday">Tuesday</option>
+                            <option value="Wednesday">Wednesday</option>
+                            <option value="Thursday">Thursday</option>
+                            <option value="Friday">Friday</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Time</label>
+                        <select class="form-control" id="examTime" required>
+                            <option value="9-11">9:00 - 11:00</option>
+                            <option value="11-1">11:00 - 1:00</option>
+                            <option value="2-4">2:00 - 4:00</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Hall</label>
+                        <select class="form-control" id="examHall" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Duration</label>
+                        <input type="text" class="form-control" id="examDuration" value="2 hours" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn btn-primary" onclick="saveExam()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container">
+    <div id="toastMessage" class="toast align-items-center text-white bg-success border-0" role="alert">
+        <div class="d-flex">
+            <div class="toast-body" id="toastBody">Success!</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ========== GLOBALS ==========
+    const API_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? 'http://localhost:5000/api'
+        : '/api';
+    
+    let token = localStorage.getItem('adminToken') || '';
+    let toast = null;
+    let currentSection = 'dashboard';
+    
+    // ========== INITIALIZATION ==========
+    document.addEventListener('DOMContentLoaded', function() {
+        toast = new bootstrap.Toast(document.getElementById('toastMessage'), { delay: 3000 });
+        
+        // Check if already logged in
+        if (token) {
+            verifyToken();
+        }
+    });
+    
+    // ========== TOAST ==========
+    function showToast(message, type = 'success') {
+        const toastEl = document.getElementById('toastMessage');
+        const toastBody = document.getElementById('toastBody');
+        
+        const bgColors = {
+            success: 'bg-success',
+            danger: 'bg-danger',
+            warning: 'bg-warning text-dark',
+            info: 'bg-info text-dark'
+        };
+        
+        toastEl.className = `toast align-items-center text-white border-0 ${bgColors[type] || 'bg-success'}`;
+        toastBody.textContent = message;
+        toast.show();
+    }
+    
+    // ========== AUTH ==========
+    async function handleLogin(e) {
+        e.preventDefault();
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const btn = document.getElementById('loginBtn');
+        
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+            
+            const data = await response.json();
+            
+            if (!response.ok) {
+                throw new Error(data.error || 'Login failed');
+            }
+            
+            token = data.token;
+            localStorage.setItem('adminToken', token);
+            
+            document.getElementById('adminUsername').textContent = data.user.username;
+            
+            showToast('✅ Login successful!', 'success');
+            
+            document.getElementById('loginPage').style.display = 'none';
+            document.getElementById('dashboardPage').style.display = 'block';
+            
+            // Load dashboard data
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sign-in-alt me-2"></i>Login';
+        }
+    }
+    
+    async function verifyToken() {
+        try {
+            const response = await fetch(`${API_URL}/admin/verify`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.ok) {
+                document.getElementById('loginPage').style.display = 'none';
+                document.getElementById('dashboardPage').style.display = 'block';
+                loadDashboard();
+            } else {
+                localStorage.removeItem('adminToken');
+                token = '';
+            }
+        } catch (error) {
+            localStorage.removeItem('adminToken');
+            token = '';
+        }
+    }
+    
+    function handleLogout() {
+        localStorage.removeItem('adminToken');
+        token = '';
+        document.getElementById('loginPage').style.display = 'flex';
+        document.getElementById('dashboardPage').style.display = 'none';
+        showToast('👋 Logged out', 'info');
+    }
+    
+    function toggleSidebar() {
+        document.getElementById('sidebar').classList.toggle('open');
+    }
+    
+    // ========== SECTION NAVIGATION ==========
+    function showSection(section) {
+        currentSection = section;
+        
+        // Update nav
+        document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+        document.querySelector(`.nav-item[data-section="${section}"]`)?.classList.add('active');
+        
+        // Update title
+        const titles = {
+            dashboard: 'Dashboard',
+            courses: 'Course Management',
+            lecturers: 'Lecturer Management',
+            halls: 'Hall Management',
+            exams: 'Exam Management',
+            timetable: 'Timetable Management'
+        };
+        document.getElementById('sectionTitle').textContent = titles[section] || section;
+        
+        // Hide all sections
+        document.querySelectorAll('[id^="section-"]').forEach(el => el.style.display = 'none');
+        
+        // Show selected section
+        document.getElementById(`section-${section}`).style.display = 'block';
+        
+        // Close sidebar on mobile
+        document.getElementById('sidebar').classList.remove('open');
+        
+        // Load data for section
+        if (section === 'dashboard') loadDashboard();
+        else if (section === 'courses') loadCourses();
+        else if (section === 'lecturers') loadLecturers();
+        else if (section === 'halls') loadHalls();
+        else if (section === 'exams') loadExams();
+        else if (section === 'timetable') loadTimetable();
+    }
+    
+    // ========== DASHBOARD ==========
+    async function loadDashboard() {
+        try {
+            const response = await fetch(`${API_URL}/admin/stats`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load stats');
+            
+            const stats = await response.json();
+            
+            document.getElementById('statCourses').textContent = stats.courses || 0;
+            document.getElementById('statLecturers').textContent = stats.lecturers || 0;
+            document.getElementById('statHalls').textContent = stats.halls || 0;
+            document.getElementById('statExams').textContent = stats.exams || 0;
+            
+            document.getElementById('courseCountBadge').textContent = stats.courses || 0;
+            document.getElementById('lecturerCountBadge').textContent = stats.lecturers || 0;
+            document.getElementById('hallCountBadge').textContent = stats.halls || 0;
+            document.getElementById('examCountBadge').textContent = stats.exams || 0;
+            
+            // Recent activity
+            const activity = document.getElementById('recentActivity');
+            activity.innerHTML = `
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <span><i class="fas fa-book text-primary me-2"></i>${stats.courses || 0} courses in system</span>
+                    <small class="text-muted">Active</small>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <span><i class="fas fa-user-tie text-success me-2"></i>${stats.lecturers || 0} lecturers registered</span>
+                    <small class="text-muted">Active</small>
+                </div>
+                <div class="d-flex justify-content-between py-2 border-bottom">
+                    <span><i class="fas fa-building text-warning me-2"></i>${stats.halls || 0} halls available</span>
+                    <small class="text-muted">Active</small>
+                </div>
+                <div class="d-flex justify-content-between py-2">
+                    <span><i class="fas fa-pencil-alt text-danger me-2"></i>${stats.exams || 0} exams scheduled</span>
+                    <small class="text-muted">Active</small>
+                </div>
+            `;
+            
+        } catch (error) {
+            showToast('❌ Error loading stats: ' + error.message, 'danger');
+        }
+    }
+    
+    // ========== COURSES ==========
+    async function loadCourses() {
+        const body = document.getElementById('coursesBody');
+        body.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/courses`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load courses');
+            
+            const courses = await response.json();
+            
+            if (courses.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No courses found</td></tr>';
+                return;
+            }
+            
+            body.innerHTML = courses.map(c => `
+                <tr>
+                    <td><strong>${c.id}</strong></td>
+                    <td>${c.name}</td>
+                    <td>${c.lecturer}</td>
+                    <td>Semester ${c.semester}</td>
+                    <td class="actions">
+                        <button class="btn btn-sm btn-warning" onclick="editCourse('${c.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteCourse('${c.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+        } catch (error) {
+            body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
+        }
+    }
+    
+    function openCourseModal(data = null) {
+        document.getElementById('courseForm').reset();
+        document.getElementById('courseEditId').value = '';
+        document.getElementById('courseModalTitle').textContent = 'Add Course';
+        
+        if (data) {
+            document.getElementById('courseEditId').value = data.id;
+            document.getElementById('courseId').value = data.id;
+            document.getElementById('courseId').disabled = true;
+            document.getElementById('courseName').value = data.name;
+            document.getElementById('courseLecturer').value = data.lecturer;
+            document.getElementById('courseSemester').value = data.semester;
+            document.getElementById('courseModalTitle').textContent = 'Edit Course';
+        } else {
+            document.getElementById('courseId').disabled = false;
+        }
+        
+        new bootstrap.Modal(document.getElementById('courseModal')).show();
+    }
+    
+    function editCourse(id) {
+        // Find course in table
+        const row = document.querySelector(`#coursesBody tr td:first-child:contains("${id}")`)?.parentElement;
+        if (row) {
+            const cells = row.querySelectorAll('td');
+            openCourseModal({
+                id: cells[0].textContent.trim(),
+                name: cells[1].textContent.trim(),
+                lecturer: cells[2].textContent.trim(),
+                semester: parseInt(cells[3].textContent.replace('Semester ', ''))
+            });
+        }
+    }
+    
+    async function saveCourse() {
+        const id = document.getElementById('courseId').value;
+        const name = document.getElementById('courseName').value;
+        const lecturer = document.getElementById('courseLecturer').value;
+        const semester = parseInt(document.getElementById('courseSemester').value);
+        const editId = document.getElementById('courseEditId').value;
+        
+        if (!id || !name || !lecturer) {
+            showToast('Please fill all fields', 'warning');
+            return;
+        }
+        
+        const data = { id, name, lecturer, semester };
+        const url = editId ? `${API_URL}/admin/courses/${editId}` : `${API_URL}/admin/courses`;
+        const method = editId ? 'PUT' : 'POST';
+        
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to save');
+            
+            showToast(result.message || 'Course saved successfully!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('courseModal')).hide();
+            loadCourses();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    async function deleteCourse(id) {
+        if (!confirm(`Delete course ${id}?`)) return;
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/courses/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to delete');
+            
+            showToast(result.message || 'Course deleted!', 'success');
+            loadCourses();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    // ========== LECTURERS ==========
+    async function loadLecturers() {
+        const body = document.getElementById('lecturersBody');
+        body.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/lecturers`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load lecturers');
+            
+            const lecturers = await response.json();
+            
+            if (lecturers.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No lecturers found</td></tr>';
+                return;
+            }
+            
+            body.innerHTML = lecturers.map(l => `
+                <tr>
+                    <td><strong>${l.id}</strong></td>
+                    <td>${l.name}</td>
+                    <td>${l.department}</td>
+                    <td>${l.email}</td>
+                    <td class="actions">
+                        <button class="btn btn-sm btn-warning" onclick="editLecturer('${l.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteLecturer('${l.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+        } catch (error) {
+            body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
+        }
+    }
+    
+    function openLecturerModal(data = null) {
+        document.getElementById('lecturerForm').reset();
+        document.getElementById('lecturerEditId').value = '';
+        document.getElementById('lecturerModalTitle').textContent = 'Add Lecturer';
+        
+        if (data) {
+            document.getElementById('lecturerEditId').value = data.id;
+            document.getElementById('lecturerId').value = data.id;
+            document.getElementById('lecturerId').disabled = true;
+            document.getElementById('lecturerName').value = data.name;
+            document.getElementById('lecturerDept').value = data.department;
+            document.getElementById('lecturerEmail').value = data.email;
+            document.getElementById('lecturerModalTitle').textContent = 'Edit Lecturer';
+        } else {
+            document.getElementById('lecturerId').disabled = false;
+        }
+        
+        new bootstrap.Modal(document.getElementById('lecturerModal')).show();
+    }
+    
+    function editLecturer(id) {
+        const row = document.querySelector(`#lecturersBody tr td:first-child:contains("${id}")`)?.parentElement;
+        if (row) {
+            const cells = row.querySelectorAll('td');
+            openLecturerModal({
+                id: cells[0].textContent.trim(),
+                name: cells[1].textContent.trim(),
+                department: cells[2].textContent.trim(),
+                email: cells[3].textContent.trim()
+            });
+        }
+    }
+    
+    async function saveLecturer() {
+        const id = document.getElementById('lecturerId').value;
+        const name = document.getElementById('lecturerName').value;
+        const department = document.getElementById('lecturerDept').value;
+        const email = document.getElementById('lecturerEmail').value;
+        const editId = document.getElementById('lecturerEditId').value;
+        
+        if (!id || !name || !department || !email) {
+            showToast('Please fill all fields', 'warning');
+            return;
+        }
+        
+        const data = { id, name, department, email };
+        const url = editId ? `${API_URL}/admin/lecturers/${editId}` : `${API_URL}/admin/lecturers`;
+        const method = editId ? 'PUT' : 'POST';
+        
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to save');
+            
+            showToast(result.message || 'Lecturer saved!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('lecturerModal')).hide();
+            loadLecturers();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    async function deleteLecturer(id) {
+        if (!confirm(`Delete lecturer ${id}?`)) return;
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/lecturers/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to delete');
+            
+            showToast('Lecturer deleted!', 'success');
+            loadLecturers();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    // ========== HALLS ==========
+    async function loadHalls() {
+        const body = document.getElementById('hallsBody');
+        body.innerHTML = '<tr><td colspan="5" class="text-center">Loading...</td></tr>';
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/halls`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load halls');
+            
+            const halls = await response.json();
+            
+            if (halls.length === 0) {
+                body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No halls found</td></tr>';
+                return;
+            }
+            
+            body.innerHTML = halls.map(h => `
+                <tr>
+                    <td><strong>${h.id}</strong></td>
+                    <td>${h.name}</td>
+                    <td>${h.capacity}</td>
+                    <td><span class="badge bg-info">${h.type}</span></td>
+                    <td class="actions">
+                        <button class="btn btn-sm btn-warning" onclick="editHall('${h.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteHall('${h.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+        } catch (error) {
+            body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
+        }
+    }
+    
+    function openHallModal(data = null) {
+        document.getElementById('hallForm').reset();
+        document.getElementById('hallEditId').value = '';
+        document.getElementById('hallModalTitle').textContent = 'Add Hall';
+        
+        if (data) {
+            document.getElementById('hallEditId').value = data.id;
+            document.getElementById('hallId').value = data.id;
+            document.getElementById('hallId').disabled = true;
+            document.getElementById('hallName').value = data.name;
+            document.getElementById('hallCapacity').value = data.capacity;
+            document.getElementById('hallType').value = data.type;
+            document.getElementById('hallModalTitle').textContent = 'Edit Hall';
+        } else {
+            document.getElementById('hallId').disabled = false;
+        }
+        
+        new bootstrap.Modal(document.getElementById('hallModal')).show();
+    }
+    
+    function editHall(id) {
+        const row = document.querySelector(`#hallsBody tr td:first-child:contains("${id}")`)?.parentElement;
+        if (row) {
+            const cells = row.querySelectorAll('td');
+            openHallModal({
+                id: cells[0].textContent.trim(),
+                name: cells[1].textContent.trim(),
+                capacity: parseInt(cells[2].textContent.trim()),
+                type: cells[3].textContent.trim()
+            });
+        }
+    }
+    
+    async function saveHall() {
+        const id = document.getElementById('hallId').value;
+        const name = document.getElementById('hallName').value;
+        const capacity = parseInt(document.getElementById('hallCapacity').value);
+        const type = document.getElementById('hallType').value;
+        const editId = document.getElementById('hallEditId').value;
+        
+        if (!id || !name || !capacity || !type) {
+            showToast('Please fill all fields', 'warning');
+            return;
+        }
+        
+        const data = { id, name, capacity, type };
+        const url = editId ? `${API_URL}/admin/halls/${editId}` : `${API_URL}/admin/halls`;
+        const method = editId ? 'PUT' : 'POST';
+        
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to save');
+            
+            showToast(result.message || 'Hall saved!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('hallModal')).hide();
+            loadHalls();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    async function deleteHall(id) {
+        if (!confirm(`Delete hall ${id}?`)) return;
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/halls/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to delete');
+            
+            showToast('Hall deleted!', 'success');
+            loadHalls();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    // ========== EXAMS ==========
+    async function loadExams() {
+        const body = document.getElementById('examsBody');
+        body.innerHTML = '<tr><td colspan="7" class="text-center">Loading...</td></tr>';
+        
+        // Populate dropdowns
+        try {
+            const coursesRes = await fetch(`${API_URL}/admin/courses`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const courses = await coursesRes.json();
+            const courseSelect = document.getElementById('examCourse');
+            courseSelect.innerHTML = courses.map(c => 
+                `<option value="${c.id}">${c.id} - ${c.name}</option>`
+            ).join('');
+        } catch (e) {}
+        
+        try {
+            const hallsRes = await fetch(`${API_URL}/admin/halls`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const halls = await hallsRes.json();
+            const hallSelect = document.getElementById('examHall');
+            hallSelect.innerHTML = halls.map(h => 
+                `<option value="${h.id}">${h.name} (${h.type})</option>`
+            ).join('');
+        } catch (e) {}
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/exams`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load exams');
+            
+            const exams = await response.json();
+            
+            if (exams.length === 0) {
+                body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No exams scheduled</td></tr>';
+                return;
+            }
+            
+            body.innerHTML = exams.map(e => `
+                <tr>
+                    <td><strong>${e.id}</strong></td>
+                    <td>${e.course}</td>
+                    <td>${e.date}</td>
+                    <td>${e.time}</td>
+                    <td>${e.hall}</td>
+                    <td>${e.duration || '2 hours'}</td>
+                    <td class="actions">
+                        <button class="btn btn-sm btn-warning" onclick="editExam('${e.id}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteExam('${e.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                </tr>
+            `).join('');
+            
+        } catch (error) {
+            body.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${error.message}</td></tr>`;
+        }
+    }
+    
+    function openExamModal(data = null) {
+        document.getElementById('examForm').reset();
+        document.getElementById('examEditId').value = '';
+        document.getElementById('examModalTitle').textContent = 'Add Exam';
+        
+        if (data) {
+            document.getElementById('examEditId').value = data.id;
+            document.getElementById('examId').value = data.id;
+            document.getElementById('examId').disabled = true;
+            document.getElementById('examCourse').value = data.course;
+            document.getElementById('examDate').value = data.date;
+            document.getElementById('examTime').value = data.time;
+            document.getElementById('examHall').value = data.hall;
+            document.getElementById('examDuration').value = data.duration || '2 hours';
+            document.getElementById('examModalTitle').textContent = 'Edit Exam';
+        } else {
+            document.getElementById('examId').disabled = false;
+        }
+        
+        new bootstrap.Modal(document.getElementById('examModal')).show();
+    }
+    
+    function editExam(id) {
+        const row = document.querySelector(`#examsBody tr td:first-child:contains("${id}")`)?.parentElement;
+        if (row) {
+            const cells = row.querySelectorAll('td');
+            openExamModal({
+                id: cells[0].textContent.trim(),
+                course: cells[1].textContent.trim(),
+                date: cells[2].textContent.trim(),
+                time: cells[3].textContent.trim(),
+                hall: cells[4].textContent.trim(),
+                duration: cells[5].textContent.trim()
+            });
+        }
+    }
+    
+    async function saveExam() {
+        const id = document.getElementById('examId').value;
+        const course = document.getElementById('examCourse').value;
+        const date = document.getElementById('examDate').value;
+        const time = document.getElementById('examTime').value;
+        const hall = document.getElementById('examHall').value;
+        const duration = document.getElementById('examDuration').value;
+        const editId = document.getElementById('examEditId').value;
+        
+        if (!id || !course || !date || !time || !hall) {
+            showToast('Please fill all fields', 'warning');
+            return;
+        }
+        
+        const data = { id, course, date, time, hall, duration };
+        const url = editId ? `${API_URL}/admin/exams/${editId}` : `${API_URL}/admin/exams`;
+        const method = editId ? 'PUT' : 'POST';
+        
+        try {
+            const response = await fetch(url, {
+                method,
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to save');
+            
+            showToast(result.message || 'Exam saved!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('examModal')).hide();
+            loadExams();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    async function deleteExam(id) {
+        if (!confirm(`Delete exam ${id}?`)) return;
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/exams/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to delete');
+            
+            showToast('Exam deleted!', 'success');
+            loadExams();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    async function generateExams() {
+        if (!confirm('Generate exam schedule automatically?')) return;
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/exams/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to generate');
+            
+            showToast('✅ Exam schedule generated!', 'success');
+            loadExams();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    // ========== TIMETABLE ==========
+    async function loadTimetable() {
+        const display = document.getElementById('timetableDisplay');
+        display.innerHTML = '<p class="text-muted text-center py-4">Loading...</p>';
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/timetable/latest`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (response.status === 404) {
+                display.innerHTML = '<p class="text-muted text-center py-4">No timetable generated. Click "Generate" to create one.</p>';
+                return;
+            }
+            
+            if (!response.ok) throw new Error('Failed to load timetable');
+            
+            const data = await response.json();
+            
+            if (!data.schedule || data.schedule.length === 0) {
+                display.innerHTML = '<p class="text-muted text-center py-4">Empty timetable</p>';
+                return;
+            }
+            
+            // Group by day
+            const grouped = data.schedule.reduce((acc, item) => {
+                const day = item.day || 'Unknown';
+                if (!acc[day]) acc[day] = [];
+                acc[day].push(item);
+                return acc;
+            }, {});
+            
+            let html = `
+                <div class="mb-3">
+                    <span class="badge bg-success">Fitness Score: ${data.fitness_score || 0}</span>
+                    <span class="badge bg-info ms-2">${data.schedule.length} sessions</span>
+                    <small class="text-muted ms-2">Generated: ${data.generated_at || 'N/A'}</small>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Day</th>
+                                <th>Time</th>
+                                <th>Course</th>
+                                <th>Lecturer</th>
+                                <th>Venue</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+            for (const day of daysOrder) {
+                if (grouped[day]) {
+                    grouped[day].sort((a, b) => a.time.localeCompare(b.time));
+                    grouped[day].forEach(item => {
+                        html += `
+                            <tr>
+                                <td>${day}</td>
+                                <td>${item.time}</td>
+                                <td><strong>${item.course}</strong></td>
+                                <td>${item.lecturer}</td>
+                                <td>${item.venue}</td>
+                            </tr>
+                        `;
+                    });
+                }
+            }
+            
+            html += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            display.innerHTML = html;
+            
+        } catch (error) {
+            display.innerHTML = `<p class="text-danger text-center py-4">${error.message}</p>`;
+        }
+    }
+    
+    async function generateTimetable() {
+        const display = document.getElementById('timetableDisplay');
+        display.innerHTML = '<p class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Generating timetable...</p>';
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/timetable/generate`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+                    slots: ['8-9', '9-10', '10-11', '11-12', '12-1', '2-3', '3-4', '4-5']
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to generate');
+            
+            showToast('✅ Timetable generated!', 'success');
+            loadTimetable();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+            loadTimetable();
+        }
+    }
+    
+    async function deleteTimetable() {
+        if (!confirm('Delete all timetables?')) return;
+        
+        try {
+            const response = await fetch(`${API_URL}/admin/timetable`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            const result = await response.json();
+            
+            if (!response.ok) throw new Error(result.error || 'Failed to delete');
+            
+            showToast(result.message || 'Timetables cleared!', 'success');
+            loadTimetable();
+            loadDashboard();
+            
+        } catch (error) {
+            showToast('❌ ' + error.message, 'danger');
+        }
+    }
+    
+    // ========== UTILITY ==========
+    // Text contains selector for jQuery-like functionality
+    if (!Element.prototype.matches) {
+        Element.prototype.matches = Element.prototype.msMatchesSelector || 
+                                   Element.prototype.webkitMatchesSelector;
+    }
+    
+    // Simple contains selector for edit functions
+    document.querySelectorAll = function(selector) {
+        if (selector.includes(':contains(')) {
+            const parts = selector.split(':contains(');
+            const tag = parts[0];
+            const text = parts[1].replace('")', '').replace('"', '');
+            const elements = document.querySelectorAll(tag);
+            return Array.from(elements).filter(el => el.textContent.trim() === text);
+        }
+        return document.querySelectorAll(selector);
+    };
+</script>
+</body>
+</html>
