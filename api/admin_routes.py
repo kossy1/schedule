@@ -193,7 +193,7 @@ def delete_lecturer(payload, lecturer_id):
     return jsonify({'message': 'Lecturer deleted successfully'}), 200
 
 # ============================================================
-# STUDENTS CRUD (Updated with Matric Number)
+# STUDENTS CRUD (Updated with Matric Number - Numbers Only)
 # ============================================================
 
 @admin_bp.route('/students', methods=['GET'])
@@ -206,17 +206,17 @@ def get_students(payload):
 @admin_bp.route('/students', methods=['POST'])
 @token_required
 def add_student(payload):
-    """Add a new student with matric number."""
+    """Add a new student with matric number (numbers only)."""
     data = request.json
     required = ['matric', 'name', 'surname', 'department', 'level']
     
     if not all(k in data for k in required):
         return jsonify({'error': f'Missing required fields: {required}'}), 400
     
-    # Validate matric number format
-    matric = data['matric'].strip().upper()
-    if not re.match(r'^HND\/[A-Z]{3}\/\d{4}\/\d{3}$', matric):
-        return jsonify({'error': 'Invalid matric number format. Use: HND/DEPT/YEAR/XXX (e.g., HND/CSC/2024/001)'}), 400
+    # Validate matric number - numbers only (no special characters)
+    matric = data['matric'].strip()
+    if not matric.isdigit():
+        return jsonify({'error': 'Matric number must contain only numbers (no letters or special characters)'}), 400
     
     # Check if student exists
     if db.students.find_one({'matric': matric}):
@@ -239,13 +239,13 @@ def add_student(payload):
 def update_student(payload, matric):
     """Update a student by matric number."""
     data = request.json
-    matric = matric.upper()
+    matric = matric.strip()
     
     # Validate matric format if provided
     if 'matric' in data:
-        new_matric = data['matric'].strip().upper()
-        if not re.match(r'^HND\/[A-Z]{3}\/\d{4}\/\d{3}$', new_matric):
-            return jsonify({'error': 'Invalid matric number format'}), 400
+        new_matric = data['matric'].strip()
+        if not new_matric.isdigit():
+            return jsonify({'error': 'Matric number must contain only numbers'}), 400
         # Check if new matric already exists
         if new_matric != matric and db.students.find_one({'matric': new_matric}):
             return jsonify({'error': f'Student with matric {new_matric} already exists'}), 400
@@ -261,8 +261,8 @@ def update_student(payload, matric):
     }
     
     # If matric is being updated
-    if 'matric' in data and data['matric'].strip().upper() != matric:
-        update_data['matric'] = data['matric'].strip().upper()
+    if 'matric' in data and data['matric'].strip() != matric:
+        update_data['matric'] = data['matric'].strip()
     
     result = db.students.update_one(
         {'matric': matric},
@@ -278,7 +278,7 @@ def update_student(payload, matric):
 @token_required
 def delete_student(payload, matric):
     """Delete a student by matric number."""
-    result = db.students.delete_one({'matric': matric.upper()})
+    result = db.students.delete_one({'matric': matric.strip()})
     
     if result.deleted_count == 0:
         return jsonify({'error': 'Student not found'}), 404
@@ -286,40 +286,48 @@ def delete_student(payload, matric):
     return jsonify({'message': 'Student deleted successfully'}), 200
 
 # ============================================================
-# STUDENT LOGIN (Matric + Surname)
+# STUDENT LOGIN (Matric Number + Surname) - FIXED
 # ============================================================
 
 @admin_bp.route('/timetable/student/login', methods=['POST'])
 def student_login():
-    """Student login with matric number and surname."""
-    data = request.json
-    matric = data.get('matric', '').strip().upper()
-    surname = data.get('surname', '').strip().title()
-    
-    if not matric or not surname:
-        return jsonify({'error': 'Matric number and surname required'}), 400
-    
-    # Validate matric format
-    if not re.match(r'^HND\/[A-Z]{3}\/\d{4}\/\d{3}$', matric):
-        return jsonify({'error': 'Invalid matric number format'}), 400
-    
-    # Find student by matric number
-    student = db.students.find_one(
-        {'matric': matric}, 
-        {'_id': 0}
-    )
-    
-    if not student:
-        return jsonify({'error': 'Student not found. Please check your matric number.'}), 404
-    
-    # Verify surname (case-insensitive)
-    if student.get('surname', '').upper() != surname.upper():
-        return jsonify({'error': 'Invalid surname. Please check and try again.'}), 401
-    
-    return jsonify({
-        'student': student,
-        'message': 'Login successful'
-    }), 200
+    """Student login with matric number (numbers only) and surname."""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        matric = data.get('matric', '').strip()
+        surname = data.get('surname', '').strip().title()
+        
+        if not matric or not surname:
+            return jsonify({'error': 'Matric number and surname are required'}), 400
+        
+        # Validate matric - numbers only
+        if not matric.isdigit():
+            return jsonify({'error': 'Matric number must contain only numbers (no letters or special characters)'}), 400
+        
+        # Find student by matric number
+        student = db.students.find_one(
+            {'matric': matric}, 
+            {'_id': 0}
+        )
+        
+        if not student:
+            return jsonify({'error': 'Student not found. Please check your matric number.'}), 404
+        
+        # Verify surname (case-insensitive)
+        if student.get('surname', '').upper() != surname.upper():
+            return jsonify({'error': 'Invalid surname. Please check and try again.'}), 401
+        
+        return jsonify({
+            'student': student,
+            'message': 'Login successful'
+        }), 200
+        
+    except Exception as e:
+        print(f"Student login error: {e}")
+        return jsonify({'error': 'An error occurred during login'}), 500
 
 # ============================================================
 # STUDENT TIMETABLE VIEW
@@ -328,25 +336,35 @@ def student_login():
 @admin_bp.route('/timetable/student/<matric>', methods=['GET'])
 def get_student_timetable(matric):
     """Get timetable for a specific student by matric number."""
-    # Find student
-    student = db.students.find_one({'matric': matric.upper()}, {'_id': 0})
-    if not student:
-        return jsonify({'error': 'Student not found'}), 404
-    
-    # Get latest timetable
-    timetable = db.timetables.find_one(sort=[('_id', -1)], projection={'_id': 0})
-    
-    if not timetable:
-        return jsonify({'error': 'No timetable found'}), 404
-    
-    # For demo, return all schedule
-    # In production, filter by student's enrolled courses
-    return jsonify({
-        'student': student,
-        'schedule': timetable.get('schedule', []),
-        'fitness_score': timetable.get('fitness_score', 0),
-        'generated_at': timetable.get('generated_at')
-    }), 200
+    try:
+        matric = matric.strip()
+        
+        # Validate matric - numbers only
+        if not matric.isdigit():
+            return jsonify({'error': 'Matric number must contain only numbers'}), 400
+        
+        # Find student
+        student = db.students.find_one({'matric': matric}, {'_id': 0})
+        if not student:
+            return jsonify({'error': 'Student not found'}), 404
+        
+        # Get latest timetable
+        timetable = db.timetables.find_one(sort=[('_id', -1)], projection={'_id': 0})
+        
+        if not timetable:
+            return jsonify({'error': 'No timetable found'}), 404
+        
+        # Return schedule (filter by student's courses in production)
+        return jsonify({
+            'student': student,
+            'schedule': timetable.get('schedule', []),
+            'fitness_score': timetable.get('fitness_score', 0),
+            'generated_at': timetable.get('generated_at')
+        }), 200
+        
+    except Exception as e:
+        print(f"Student timetable error: {e}")
+        return jsonify({'error': 'An error occurred'}), 500
 
 # ============================================================
 # LECTURER LOGIN (Staff ID + Surname)
@@ -355,30 +373,42 @@ def get_student_timetable(matric):
 @admin_bp.route('/timetable/lecturer/login', methods=['POST'])
 def lecturer_login():
     """Lecturer login with staff ID and surname."""
-    data = request.json
-    staff_id = data.get('staff_id', '').strip().upper()
-    surname = data.get('surname', '').strip().title()
-    
-    if not staff_id or not surname:
-        return jsonify({'error': 'Staff ID and surname required'}), 400
-    
-    # Find lecturer by staff ID
-    lecturer = db.lecturers.find_one(
-        {'id': staff_id}, 
-        {'_id': 0}
-    )
-    
-    if not lecturer:
-        return jsonify({'error': 'Lecturer not found. Please check your staff ID.'}), 404
-    
-    # Verify surname (case-insensitive)
-    if lecturer.get('surname', '').upper() != surname.upper():
-        return jsonify({'error': 'Invalid surname. Please check and try again.'}), 401
-    
-    return jsonify({
-        'lecturer': lecturer,
-        'message': 'Login successful'
-    }), 200
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        staff_id = data.get('staff_id', '').strip().upper()
+        surname = data.get('surname', '').strip().title()
+        
+        if not staff_id or not surname:
+            return jsonify({'error': 'Staff ID and surname required'}), 400
+        
+        # Validate staff ID format
+        if not re.match(r'^LEC-\d{3}$', staff_id):
+            return jsonify({'error': 'Invalid staff ID format. Use: LEC-001, LEC-002, etc.'}), 400
+        
+        # Find lecturer by staff ID
+        lecturer = db.lecturers.find_one(
+            {'id': staff_id}, 
+            {'_id': 0}
+        )
+        
+        if not lecturer:
+            return jsonify({'error': 'Lecturer not found. Please check your staff ID.'}), 404
+        
+        # Verify surname (case-insensitive)
+        if lecturer.get('surname', '').upper() != surname.upper():
+            return jsonify({'error': 'Invalid surname. Please check and try again.'}), 401
+        
+        return jsonify({
+            'lecturer': lecturer,
+            'message': 'Login successful'
+        }), 200
+        
+    except Exception as e:
+        print(f"Lecturer login error: {e}")
+        return jsonify({'error': 'An error occurred during login'}), 500
 
 # ============================================================
 # LECTURER TIMETABLE VIEW
@@ -387,31 +417,38 @@ def lecturer_login():
 @admin_bp.route('/timetable/lecturer/<staff_id>', methods=['GET'])
 def get_lecturer_timetable(staff_id):
     """Get timetable for a specific lecturer by staff ID."""
-    # Find lecturer
-    lecturer = db.lecturers.find_one({'id': staff_id.upper()}, {'_id': 0})
-    if not lecturer:
-        return jsonify({'error': 'Lecturer not found'}), 404
-    
-    # Get latest timetable
-    timetable = db.timetables.find_one(sort=[('_id', -1)], projection={'_id': 0})
-    
-    if not timetable:
-        return jsonify({'error': 'No timetable found'}), 404
-    
-    # Filter schedule for this lecturer
-    lecturer_name = lecturer.get('name', '')
-    filtered_schedule = []
-    
-    for item in timetable.get('schedule', []):
-        if item.get('lecturer') == lecturer_name:
-            filtered_schedule.append(item)
-    
-    return jsonify({
-        'lecturer': lecturer,
-        'schedule': filtered_schedule,
-        'fitness_score': timetable.get('fitness_score', 0),
-        'generated_at': timetable.get('generated_at')
-    }), 200
+    try:
+        staff_id = staff_id.strip().upper()
+        
+        # Find lecturer
+        lecturer = db.lecturers.find_one({'id': staff_id}, {'_id': 0})
+        if not lecturer:
+            return jsonify({'error': 'Lecturer not found'}), 404
+        
+        # Get latest timetable
+        timetable = db.timetables.find_one(sort=[('_id', -1)], projection={'_id': 0})
+        
+        if not timetable:
+            return jsonify({'error': 'No timetable found'}), 404
+        
+        # Filter schedule for this lecturer
+        lecturer_name = lecturer.get('name', '')
+        filtered_schedule = []
+        
+        for item in timetable.get('schedule', []):
+            if item.get('lecturer') == lecturer_name:
+                filtered_schedule.append(item)
+        
+        return jsonify({
+            'lecturer': lecturer,
+            'schedule': filtered_schedule,
+            'fitness_score': timetable.get('fitness_score', 0),
+            'generated_at': timetable.get('generated_at')
+        }), 200
+        
+    except Exception as e:
+        print(f"Lecturer timetable error: {e}")
+        return jsonify({'error': 'An error occurred'}), 500
 
 # ============================================================
 # COURSES CRUD
@@ -773,7 +810,7 @@ def enroll_student(payload, matric):
         return jsonify({'error': 'No courses provided'}), 400
     
     result = db.students.update_one(
-        {'matric': matric.upper()},
+        {'matric': matric.strip()},
         {'$set': {
             'courses': courses,
             'updated_at': datetime.utcnow().isoformat()
@@ -791,7 +828,7 @@ def enroll_student(payload, matric):
 @admin_bp.route('/students/<matric>/courses', methods=['GET'])
 def get_student_courses(matric):
     """Get courses enrolled by a student."""
-    student = db.students.find_one({'matric': matric.upper()}, {'_id': 0})
+    student = db.students.find_one({'matric': matric.strip()}, {'_id': 0})
     
     if not student:
         return jsonify({'error': 'Student not found'}), 404
