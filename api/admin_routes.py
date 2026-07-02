@@ -8,6 +8,12 @@ import re
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
 # ============================================================
+# CONSTANTS
+# ============================================================
+
+VALID_LEVELS = ['ND1', 'ND2', 'HND1', 'HND2']
+
+# ============================================================
 # AUTHENTICATION
 # ============================================================
 
@@ -195,8 +201,6 @@ def delete_lecturer(payload, lecturer_id):
 # ============================================================
 # STUDENTS CRUD (Polytechnic Levels: ND1, ND2, HND1, HND2)
 # ============================================================
-
-VALID_LEVELS = ['ND1', 'ND2', 'HND1', 'HND2']
 
 @admin_bp.route('/students', methods=['GET'])
 @token_required
@@ -461,7 +465,7 @@ def get_lecturer_timetable(staff_id):
         return jsonify({'error': 'An error occurred'}), 500
 
 # ============================================================
-# COURSES CRUD
+# COURSES CRUD (with Level)
 # ============================================================
 
 @admin_bp.route('/courses', methods=['GET'])
@@ -474,12 +478,16 @@ def get_courses(payload):
 @admin_bp.route('/courses', methods=['POST'])
 @token_required
 def add_course(payload):
-    """Add a new course."""
+    """Add a new course with level."""
     data = request.json
-    required = ['code', 'name', 'department', 'lecturer', 'credits', 'semester']
+    required = ['code', 'name', 'department', 'level', 'lecturer', 'credits', 'semester']
     
     if not all(k in data for k in required):
         return jsonify({'error': f'Missing required fields: {required}'}), 400
+    
+    # Validate level
+    if data['level'] not in VALID_LEVELS:
+        return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
     
     if db.courses.find_one({'code': data['code']}):
         return jsonify({'error': f'Course {data["code"]} already exists'}), 400
@@ -493,6 +501,7 @@ def add_course(payload):
         'name': data['name'],
         'department': data['department'],
         'department_code': dept_code,
+        'level': data['level'],
         'lecturer': data['lecturer'],
         'credits': data['credits'],
         'semester': data['semester'],
@@ -505,16 +514,24 @@ def add_course(payload):
 def update_course(payload, course_code):
     """Update a course."""
     data = request.json
+    
+    # Validate level if provided
+    if 'level' in data and data['level'] not in VALID_LEVELS:
+        return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
+    
+    update_data = {
+        'name': data.get('name'),
+        'department': data.get('department'),
+        'level': data.get('level'),
+        'lecturer': data.get('lecturer'),
+        'credits': data.get('credits'),
+        'semester': data.get('semester'),
+        'updated_at': datetime.utcnow().isoformat()
+    }
+    
     result = db.courses.update_one(
         {'code': course_code},
-        {'$set': {
-            'name': data.get('name'),
-            'department': data.get('department'),
-            'lecturer': data.get('lecturer'),
-            'credits': data.get('credits'),
-            'semester': data.get('semester'),
-            'updated_at': datetime.utcnow().isoformat()
-        }}
+        {'$set': update_data}
     )
     
     if result.matched_count == 0:
@@ -756,6 +773,7 @@ def generate_timetable(payload):
             'id': c['code'],
             'name': c['name'],
             'lecturer': c.get('lecturer', 'Unknown'),
+            'level': c.get('level', 'ND1'),
             'semester': c.get('semester', 1)
         })
     
