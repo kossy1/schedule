@@ -193,8 +193,10 @@ def delete_lecturer(payload, lecturer_id):
     return jsonify({'message': 'Lecturer deleted successfully'}), 200
 
 # ============================================================
-# STUDENTS CRUD (Updated with Matric Number - Numbers Only)
+# STUDENTS CRUD (Polytechnic Levels: ND1, ND2, HND1, HND2)
 # ============================================================
+
+VALID_LEVELS = ['ND1', 'ND2', 'HND1', 'HND2']
 
 @admin_bp.route('/students', methods=['GET'])
 @token_required
@@ -206,17 +208,21 @@ def get_students(payload):
 @admin_bp.route('/students', methods=['POST'])
 @token_required
 def add_student(payload):
-    """Add a new student with matric number (numbers only)."""
+    """Add a new student with matric number (numbers only) and polytechnic level."""
     data = request.json
     required = ['matric', 'name', 'surname', 'department', 'level']
     
     if not all(k in data for k in required):
         return jsonify({'error': f'Missing required fields: {required}'}), 400
     
-    # Validate matric number - numbers only (no special characters)
+    # Validate matric number - numbers only
     matric = data['matric'].strip()
     if not matric.isdigit():
         return jsonify({'error': 'Matric number must contain only numbers (no letters or special characters)'}), 400
+    
+    # Validate level - must be ND1, ND2, HND1, or HND2
+    if data['level'] not in VALID_LEVELS:
+        return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
     
     # Check if student exists
     if db.students.find_one({'matric': matric}):
@@ -249,6 +255,10 @@ def update_student(payload, matric):
         # Check if new matric already exists
         if new_matric != matric and db.students.find_one({'matric': new_matric}):
             return jsonify({'error': f'Student with matric {new_matric} already exists'}), 400
+    
+    # Validate level if provided
+    if 'level' in data and data['level'] not in VALID_LEVELS:
+        return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
     
     update_data = {
         'name': data.get('name'),
@@ -286,7 +296,7 @@ def delete_student(payload, matric):
     return jsonify({'message': 'Student deleted successfully'}), 200
 
 # ============================================================
-# STUDENT LOGIN (Matric Number + Surname) - FIXED
+# STUDENT LOGIN (Matric Number + Surname)
 # ============================================================
 
 @admin_bp.route('/timetable/student/login', methods=['POST'])
