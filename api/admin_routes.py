@@ -465,7 +465,7 @@ def get_lecturer_timetable(staff_id):
         return jsonify({'error': 'An error occurred'}), 500
 
 # ============================================================
-# COURSES CRUD (with Manual Code Entry)
+# COURSES CRUD (with Manual Code Entry - Editable)
 # ============================================================
 
 @admin_bp.route('/courses', methods=['GET'])
@@ -513,14 +513,20 @@ def add_course(payload):
 @admin_bp.route('/courses/<course_code>', methods=['PUT'])
 @token_required
 def update_course(payload, course_code):
-    """Update a course."""
+    """Update a course - allows changing the course code."""
     data = request.json
     
     # Validate level if provided
     if 'level' in data and data['level'] not in VALID_LEVELS:
         return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
     
+    # If course code is being changed, check if the new code already exists
+    if 'code' in data and data['code'] != course_code:
+        if db.courses.find_one({'code': data['code']}):
+            return jsonify({'error': f'Course {data["code"]} already exists'}), 400
+    
     update_data = {
+        'code': data.get('code', course_code),  # Allow updating the code
         'name': data.get('name'),
         'department': data.get('department'),
         'level': data.get('level'),
