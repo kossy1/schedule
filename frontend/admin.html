@@ -11,6 +11,7 @@
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <style>
+        /* ... (CSS remains the same as previous version) ... */
         :root {
             --primary: #1a3a5c;
             --primary-light: #2a5a8c;
@@ -959,7 +960,7 @@
             </div>
         </div>
         
-        <!-- ===== COURSES SECTION WITH LEVEL ===== -->
+        <!-- ===== COURSES SECTION WITH EDITABLE CODE ===== -->
         <div id="section-courses" class="section-content">
             <div class="content-panel">
                 <div class="panel-header">
@@ -1292,7 +1293,7 @@
     </div>
 </div>
 
-<!-- ===== COURSE MODAL WITH LEVEL ===== -->
+<!-- ===== COURSE MODAL WITH EDITABLE CODE ===== -->
 <div class="modal fade" id="courseModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -1304,9 +1305,9 @@
                 <form id="courseForm">
                     <input type="hidden" id="courseEditId">
                     <div class="mb-3">
-                        <label class="form-label">Course Code</label>
-                        <input type="text" class="form-control" id="courseCode" readonly>
-                        <small class="text-muted">Auto-generated: <span id="courseCodePreview">CSC-101</span></small>
+                        <label class="form-label">Course Code <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="courseCode" placeholder="e.g., CSC-101" required>
+                        <small class="text-muted">Enter the course code manually (e.g., CSC-101, MTH-201)</small>
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Course Name <span class="text-danger">*</span></label>
@@ -1314,7 +1315,7 @@
                     </div>
                     <div class="mb-3">
                         <label class="form-label">Department <span class="text-danger">*</span></label>
-                        <select class="form-select" id="courseDept" required onchange="generateCourseCode()">
+                        <select class="form-select" id="courseDept" required>
                             <option value="">Select Department</option>
                         </select>
                     </div>
@@ -1488,7 +1489,7 @@
     let csvData = [];
     
     // ========================================================
-    // AUTO-ID GENERATORS
+    // AUTO-ID GENERATORS (Only for auto-generated IDs)
     // ========================================================
     const IDGenerators = {
         department: async function() {
@@ -1499,12 +1500,7 @@
             const count = await getCount('lecturers');
             return `LEC-${String(count + 1).padStart(3, '0')}`;
         },
-        course: async function(deptCode) {
-            const count = await getCount('courses');
-            const deptPrefix = deptCode || 'CSC';
-            const num = String(count + 1).padStart(3, '0');
-            return `${deptPrefix}-${num}`;
-        },
+        // Course code is now manual - no auto-generation
         hall: async function() {
             const count = await getCount('halls');
             return `HALL-${String(count + 1).padStart(3, '0')}`;
@@ -2398,7 +2394,7 @@
     }
     
     // ========================================================
-    // COURSES CRUD with Level
+    // COURSES CRUD with Manual Code Entry
     // ========================================================
     async function loadCourses() {
         const body = document.getElementById('coursesBody');
@@ -2467,15 +2463,11 @@
         }
     }
     
+    // Course code is now manually entered - no auto-generation needed
+    // This function is kept for compatibility but does nothing
     function generateCourseCode() {
-        const dept = document.getElementById('courseDept').value;
-        const preview = document.getElementById('courseCodePreview');
-        if (dept) {
-            const code = dept.substring(0, 3).toUpperCase();
-            preview.textContent = `${code}-101`;
-        } else {
-            preview.textContent = 'CSC-101';
-        }
+        // Course code is now manually entered by the admin
+        // This function is no longer used for auto-generation
     }
     
     async function openCourseModal(data = null) {
@@ -2483,11 +2475,13 @@
         document.getElementById('courseEditId').value = '';
         document.getElementById('courseModalTitle').textContent = 'Add Course';
         document.getElementById('courseCode').disabled = false;
+        document.getElementById('courseCode').readOnly = false;
         
         if (data) {
             document.getElementById('courseEditId').value = data.code;
             document.getElementById('courseCode').value = data.code;
             document.getElementById('courseCode').disabled = true;
+            document.getElementById('courseCode').readOnly = true;
             document.getElementById('courseName').value = data.name;
             document.getElementById('courseDept').value = data.department;
             document.getElementById('courseLevel').value = data.level || '';
@@ -2495,16 +2489,6 @@
             document.getElementById('courseCredits').value = data.credits;
             document.getElementById('courseSemester').value = data.semester;
             document.getElementById('courseModalTitle').textContent = 'Edit Course';
-            document.getElementById('courseCodePreview').textContent = data.code;
-        } else {
-            document.getElementById('courseCode').disabled = false;
-            const dept = document.getElementById('courseDept').value || 'CSC';
-            const deptCode = dept.substring(0, 3).toUpperCase();
-            const count = await getCount('courses');
-            const num = String(count + 1).padStart(3, '0');
-            const newCode = `${deptCode}-${num}`;
-            document.getElementById('courseCode').value = newCode;
-            document.getElementById('courseCodePreview').textContent = newCode;
         }
         
         new bootstrap.Modal(document.getElementById('courseModal')).show();
@@ -2537,14 +2521,20 @@
     }
     
     async function saveCourse() {
-        const code = document.getElementById('courseCode').value;
-        const name = document.getElementById('courseName').value;
+        const code = document.getElementById('courseCode').value.trim();
+        const name = document.getElementById('courseName').value.trim();
         const department = document.getElementById('courseDept').value;
         const level = document.getElementById('courseLevel').value;
         const lecturer = document.getElementById('courseLecturer').value;
         const credits = parseInt(document.getElementById('courseCredits').value);
         const semester = parseInt(document.getElementById('courseSemester').value);
         const editId = document.getElementById('courseEditId').value;
+        
+        // Validate course code
+        if (!code) {
+            showToast('Please enter a course code', 'warning');
+            return;
+        }
         
         if (!name || !department || !level || !lecturer || !credits) {
             showToast('Please fill all required fields', 'warning');

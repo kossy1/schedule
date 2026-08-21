@@ -465,7 +465,7 @@ def get_lecturer_timetable(staff_id):
         return jsonify({'error': 'An error occurred'}), 500
 
 # ============================================================
-# COURSES CRUD (with Level)
+# COURSES CRUD (with Manual Code Entry)
 # ============================================================
 
 @admin_bp.route('/courses', methods=['GET'])
@@ -478,7 +478,7 @@ def get_courses(payload):
 @admin_bp.route('/courses', methods=['POST'])
 @token_required
 def add_course(payload):
-    """Add a new course with level."""
+    """Add a new course with manual code entry."""
     data = request.json
     required = ['code', 'name', 'department', 'level', 'lecturer', 'credits', 'semester']
     
@@ -489,6 +489,7 @@ def add_course(payload):
     if data['level'] not in VALID_LEVELS:
         return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
     
+    # Check if course exists
     if db.courses.find_one({'code': data['code']}):
         return jsonify({'error': f'Course {data["code"]} already exists'}), 400
     
