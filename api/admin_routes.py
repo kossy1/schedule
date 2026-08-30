@@ -573,7 +573,7 @@ def get_lecturer_timetable(staff_id):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# COURSES CRUD
+# COURSES CRUD - FIXED SYNTAX ERROR
 # ============================================================
 
 @admin_bp.route('/courses', methods=['GET'])
@@ -587,7 +587,7 @@ def get_courses(payload):
         print(f"❌ Get courses error: {e}")
         return jsonify({'error': str(e)}), 500
 
-@admin_bp.route('/courses', methods(['POST'])
+@admin_bp.route('/courses', methods=['POST'])
 @token_required
 def add_course(payload):
     """Add a new course with manual code entry."""
