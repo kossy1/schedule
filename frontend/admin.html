@@ -726,6 +726,43 @@
             background: var(--primary);
             color: white;
         }
+        
+        /* Duration badge */
+        .duration-badge {
+            background: #ffc107;
+            color: #1a3a5c;
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            font-weight: 600;
+        }
+        
+        /* Semester selector */
+        .semester-selector {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .semester-selector label {
+            font-weight: 600;
+            font-size: 0.85rem;
+            color: var(--primary);
+            margin: 0;
+        }
+        .semester-selector select {
+            border-radius: 20px;
+            padding: 4px 12px;
+            border: 2px solid #e2e8f0;
+            font-size: 0.85rem;
+            font-weight: 500;
+            color: var(--primary);
+            background: white;
+            cursor: pointer;
+        }
+        .semester-selector select:focus {
+            border-color: var(--secondary);
+            outline: none;
+        }
     </style>
 </head>
 <body>
@@ -1091,42 +1128,51 @@
                 </div>
             </div>
 
-            <!-- ===== TIMETABLE SECTION WITH EXPORT ===== -->
+            <!-- ===== TIMETABLE SECTION WITH SEMESTER SELECTOR ===== -->
             <div id="section-timetable" class="section-content">
                 <div class="content-panel">
                     <div class="panel-header">
                         <h5><i class="fas fa-calendar-alt me-2"></i>Class Timetable</h5>
                         <div>
-                            <button class="btn btn-success me-1" onclick="generateClassTimetable()">
-                                <i class="fas fa-sync-alt me-1"></i> Generate
-                            </button>
-                            <button class="btn btn-danger me-1" onclick="clearTimetable()">
-                                <i class="fas fa-trash me-1"></i> Clear
-                            </button>
-                            <div class="btn-group export-dropdown">
-                                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                    <i class="fas fa-file-export me-1"></i> Export
+                            <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <div class="semester-selector">
+                                    <label><i class="fas fa-book me-1"></i>Semester:</label>
+                                    <select id="semesterSelect" onchange="loadTimetable()">
+                                        <option value="1">Semester 1</option>
+                                        <option value="2">Semester 2</option>
+                                    </select>
+                                </div>
+                                <button class="btn btn-success btn-sm" onclick="generateClassTimetable()">
+                                    <i class="fas fa-sync-alt me-1"></i> Generate
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end">
-                                    <li><a class="dropdown-item" onclick="exportTimetable('pdf')">
-                                        <i class="fas fa-file-pdf text-danger me-2"></i> Export as PDF
-                                    </a></li>
-                                    <li><a class="dropdown-item" onclick="exportTimetable('excel')">
-                                        <i class="fas fa-file-excel text-success me-2"></i> Export as Excel
-                                    </a></li>
-                                    <li><a class="dropdown-item" onclick="exportTimetable('csv')">
-                                        <i class="fas fa-file-csv text-primary me-2"></i> Export as CSV
-                                    </a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item" onclick="printTimetable()">
-                                        <i class="fas fa-print text-secondary me-2"></i> Print
-                                    </a></li>
-                                </ul>
+                                <button class="btn btn-danger btn-sm" onclick="clearTimetable()">
+                                    <i class="fas fa-trash me-1"></i> Clear
+                                </button>
+                                <div class="btn-group export-dropdown">
+                                    <button class="btn btn-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        <i class="fas fa-file-export me-1"></i> Export
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" onclick="exportTimetable('pdf')">
+                                            <i class="fas fa-file-pdf text-danger me-2"></i> Export as PDF
+                                        </a></li>
+                                        <li><a class="dropdown-item" onclick="exportTimetable('excel')">
+                                            <i class="fas fa-file-excel text-success me-2"></i> Export as Excel
+                                        </a></li>
+                                        <li><a class="dropdown-item" onclick="exportTimetable('csv')">
+                                            <i class="fas fa-file-csv text-primary me-2"></i> Export as CSV
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item" onclick="printTimetable()">
+                                            <i class="fas fa-print text-secondary me-2"></i> Print
+                                        </a></li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div id="timetableDisplay">
-                        <p class="text-muted text-center py-4">No timetable generated. Click "Generate" to create one.</p>
+                        <p class="text-muted text-center py-4">No timetable generated. Select semester and click "Generate" to create one.</p>
                     </div>
                 </div>
             </div>
@@ -2775,20 +2821,38 @@
         }
 
         // ========================================================
-        // CLASS TIMETABLE WITH EXPORT
+        // CLASS TIMETABLE WITH SEMESTER SELECTION
         // ========================================================
         async function loadTimetable() {
             const display = document.getElementById('timetableDisplay');
-            display.innerHTML = '<p class="text-muted text-center py-4">Loading...</p>';
+            display.innerHTML =
+                '<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Loading timetable...</p></div>';
 
             try {
-                const data = await apiCall('/timetable/latest');
+                const semester = document.getElementById('semesterSelect').value;
+
+                let data;
+                try {
+                    data = await apiCall(`/timetable/by-semester/${semester}`);
+                } catch (error) {
+                    if (error.message.includes('404')) {
+                        data = await apiCall('/timetable/latest');
+                        if (data && data.semester && data.semester != semester) {
+                            showToast(
+                                `Showing latest timetable (Semester ${data.semester}). No timetable found for Semester ${semester}.`,
+                                'warning');
+                        }
+                    } else {
+                        throw error;
+                    }
+                }
 
                 if (!data.schedule || data.schedule.length === 0) {
                     display.innerHTML = `
                             <div class="empty-state">
                                 <i class="fas fa-calendar-times"></i>
-                                <p>No timetable generated. Click "Generate" to create one.</p>
+                                <p>No timetable found for Semester ${semester}.</p>
+                                <small class="text-muted">Select semester and click "Generate" to create one.</small>
                             </div>
                         `;
                     return;
@@ -2804,9 +2868,11 @@
                 let html = `
                         <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <div>
-                                <span class="badge bg-success">Fitness Score: ${data.fitness_score || 0}</span>
-                                <span class="badge bg-info ms-2">${data.schedule.length} sessions</span>
-                                <small class="text-muted ms-2">Generated: ${data.generated_at || 'N/A'}</small>
+                                <span class="badge bg-primary">Semester ${data.semester || semester}</span>
+                                <span class="badge bg-success ms-1">Fitness: ${data.fitness_score || 0}</span>
+                                <span class="badge bg-info ms-1">${data.schedule.length} sessions</span>
+                                <span class="badge bg-warning ms-1"><i class="fas fa-clock me-1"></i>2 hours each</span>
+                                <small class="text-muted ms-2">Generated: ${data.generated_at ? new Date(data.generated_at).toLocaleString() : 'N/A'}</small>
                             </div>
                             <div class="btn-group">
                                 <button class="btn btn-sm btn-outline-primary" onclick="exportTimetable('pdf')">
@@ -2832,10 +2898,11 @@
                                         <th>Course</th>
                                         <th>Lecturer</th>
                                         <th>Venue</th>
+                                        <th>Duration</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                    `;
+                        `;
 
                 const daysOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
                 for (const day of daysOrder) {
@@ -2849,6 +2916,7 @@
                                         <td>${item.course}</td>
                                         <td>${item.lecturer}</td>
                                         <td>${item.venue}</td>
+                                        <td><span class="badge bg-warning">${item.duration || '2 hours'}</span></td>
                                     </tr>
                                 `;
                         });
@@ -2865,10 +2933,12 @@
 
             } catch (error) {
                 if (error.message.includes('404')) {
+                    const semester = document.getElementById('semesterSelect').value;
                     display.innerHTML = `
                             <div class="empty-state">
                                 <i class="fas fa-calendar-times"></i>
-                                <p>No timetable generated. Click "Generate" to create one.</p>
+                                <p>No timetable found for Semester ${semester}.</p>
+                                <small class="text-muted">Select semester and click "Generate" to create one.</small>
                             </div>
                         `;
                 } else {
@@ -2879,20 +2949,22 @@
 
         async function generateClassTimetable() {
             const display = document.getElementById('timetableDisplay');
+            const semester = document.getElementById('semesterSelect').value;
             display.innerHTML =
-                '<p class="text-center py-4"><i class="fas fa-spinner fa-spin me-2"></i>Generating timetable...</p>';
+                `<div class="text-center py-4"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-2">Generating timetable for Semester ${semester}...</p></div>`;
 
             showLoading(true);
             try {
                 await apiCall('/timetable/generate', {
                     method: 'POST',
                     body: JSON.stringify({
+                        semester: parseInt(semester),
                         days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
-                        slots: ['8-9', '9-10', '10-11', '11-12', '12-1', '2-3', '3-4', '4-5']
+                        slots: ['8:00 - 10:00', '10:00 - 12:00', '12:00 - 2:00', '2:00 - 4:00', '4:00 - 6:00']
                     })
                 });
 
-                showToast('✅ Timetable generated!', 'success');
+                showToast(`✅ Timetable generated for Semester ${semester} with 2-hour sessions!`, 'success');
                 loadTimetable();
                 loadDashboard();
             } catch (error) {
@@ -2923,13 +2995,14 @@
             const data = [];
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 5) {
+                if (cells.length >= 6) {
                     data.push({
                         day: cells[0].textContent.trim(),
                         time: cells[1].textContent.trim(),
                         course: cells[2].textContent.trim(),
                         lecturer: cells[3].textContent.trim(),
-                        venue: cells[4].textContent.trim()
+                        venue: cells[4].textContent.trim(),
+                        duration: cells[5].textContent.trim()
                     });
                 }
             });
@@ -2963,7 +3036,8 @@
                 script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
                 document.head.appendChild(script);
                 const script2 = document.createElement('script');
-                script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+                script2.src =
+                'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
                 document.head.appendChild(script2);
                 script.onload = () => { setTimeout(() => generatePDF(data), 500); };
                 showToast('Loading PDF library...', 'info');
@@ -2976,27 +3050,30 @@
             try {
                 const { jsPDF } = window.jspdf;
                 const doc = new jsPDF('landscape', 'mm', 'a4');
+                const semester = document.getElementById('semesterSelect').value;
                 doc.setFontSize(18);
                 doc.setTextColor(26, 58, 92);
                 doc.text('The Polytechnic, Ibadan', 14, 20);
                 doc.setFontSize(14);
-                doc.text('Class Timetable', 14, 30);
+                doc.text(`Class Timetable - Semester ${semester} (2-Hour Sessions)`, 14, 30);
                 doc.setFontSize(10);
                 doc.setTextColor(100);
                 doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 37);
-                const tableData = data.map(item => [item.day, item.time, item.course, item.lecturer, item.venue]);
+                const tableData = data.map(item => [item.day, item.time, item.course, item.lecturer, item.venue, item
+                    .duration
+                ]);
                 doc.autoTable({
                     startY: 45,
                     head: [
-                        ['Day', 'Time', 'Course', 'Lecturer', 'Venue']
+                        ['Day', 'Time', 'Course', 'Lecturer', 'Venue', 'Duration']
                     ],
                     body: tableData,
                     theme: 'striped',
                     headStyles: { fillColor: [26, 58, 92], textColor: [255, 255, 255], fontSize: 10,
                         fontStyle: 'bold' },
                     styles: { fontSize: 9, cellPadding: 3 },
-                    columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 25 }, 2: { cellWidth: 50 },
-                    3: { cellWidth: 45 }, 4: { cellWidth: 30 } }
+                    columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 30 }, 2: { cellWidth: 45 },
+                        3: { cellWidth: 40 }, 4: { cellWidth: 25 }, 5: { cellWidth: 20 } }
                 });
                 const pageCount = doc.internal.getNumberOfPages();
                 for (let i = 1; i <= pageCount; i++) {
@@ -3004,12 +3081,12 @@
                     doc.setFontSize(8);
                     doc.setTextColor(150);
                     doc.text(
-                        `Page ${i} of ${pageCount} - The Polytechnic Ibadan Timetable`,
+                        `Page ${i} of ${pageCount} - The Polytechnic Ibadan Timetable - Semester ${semester}`,
                         doc.internal.pageSize.getWidth() / 2,
                         doc.internal.pageSize.getHeight() - 5, { align: 'center' }
                     );
                 }
-                doc.save('timetable.pdf');
+                doc.save(`timetable_semester_${semester}.pdf`);
                 showToast('✅ PDF exported successfully!', 'success');
             } catch (error) {
                 console.error('PDF export error:', error);
@@ -3031,29 +3108,32 @@
 
         function generateExcel(data) {
             try {
+                const semester = document.getElementById('semesterSelect').value;
                 const excelData = [
                     ['The Polytechnic, Ibadan'],
-                    ['Class Timetable'],
+                    [`Class Timetable - Semester ${semester} (2-Hour Sessions)`],
                     [`Generated: ${new Date().toLocaleString()}`],
                     [],
-                    ['Day', 'Time', 'Course', 'Lecturer', 'Venue']
+                    ['Day', 'Time', 'Course', 'Lecturer', 'Venue', 'Duration']
                 ];
                 data.forEach(item => {
-                    excelData.push([item.day, item.time, item.course, item.lecturer, item.venue]);
+                    excelData.push([item.day, item.time, item.course, item.lecturer, item.venue, item.duration]);
                 });
                 excelData.push([]);
                 excelData.push(['Total Sessions:', data.length]);
+                excelData.push(['Session Duration:', '2 hours']);
+                excelData.push(['Semester:', semester]);
                 excelData.push(['Generated By:', document.getElementById('adminUsername').textContent || 'Admin']);
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.aoa_to_sheet(excelData);
-                ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 30 }, { wch: 25 }, { wch: 20 }];
+                ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 25 }, { wch: 20 }, { wch: 15 }];
                 ws['!merges'] = [
-                    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
-                    { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
-                    { s: { r: 2, c: 0 }, e: { r: 2, c: 4 } }
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
+                    { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
+                    { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } }
                 ];
-                XLSX.utils.book_append_sheet(wb, ws, 'Timetable');
-                XLSX.writeFile(wb, 'timetable.xlsx');
+                XLSX.utils.book_append_sheet(wb, ws, `Semester_${semester}`);
+                XLSX.writeFile(wb, `timetable_semester_${semester}.xlsx`);
                 showToast('✅ Excel exported successfully!', 'success');
             } catch (error) {
                 console.error('Excel export error:', error);
@@ -3063,19 +3143,23 @@
 
         function exportToCSV(data) {
             try {
+                const semester = document.getElementById('semesterSelect').value;
                 let csv = 'The Polytechnic, Ibadan\n';
-                csv += 'Class Timetable\n';
+                csv += `Class Timetable - Semester ${semester} (2-Hour Sessions)\n`;
                 csv += `Generated: ${new Date().toLocaleString()}\n\n`;
-                csv += 'Day,Time,Course,Lecturer,Venue\n';
+                csv += 'Day,Time,Course,Lecturer,Venue,Duration\n';
                 data.forEach(item => {
-                    csv += `${item.day},${item.time},"${item.course}","${item.lecturer}",${item.venue}\n`;
+                    csv +=
+                    `${item.day},${item.time},"${item.course}","${item.lecturer}",${item.venue},${item.duration}\n`;
                 });
                 csv += `\nTotal Sessions: ${data.length}\n`;
+                csv += `Session Duration: 2 hours\n`;
+                csv += `Semester: ${semester}\n`;
                 csv += `Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}`;
                 const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(blob);
-                link.download = 'timetable.csv';
+                link.download = `timetable_semester_${semester}.csv`;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -3090,6 +3174,7 @@
         function printTimetable() {
             const printWindow = window.open('', '_blank');
             const timetableContent = document.getElementById('timetableDisplay').innerHTML;
+            const semester = document.getElementById('semesterSelect').value;
 
             printWindow.document.write(`
                     <!DOCTYPE html>
@@ -3101,11 +3186,13 @@
                             .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1a3a5c; padding-bottom: 20px; }
                             .header h1 { color: #1a3a5c; margin: 0; font-size: 24px; }
                             .header h2 { color: #e6b31e; margin: 5px 0; font-size: 18px; }
+                            .header h3 { color: #666; margin: 5px 0; font-size: 14px; }
                             .header p { color: #666; margin: 5px 0; font-size: 12px; }
                             table { width: 100%; border-collapse: collapse; margin-top: 20px; }
                             th { background: #1a3a5c; color: white; padding: 10px 12px; text-align: left; font-size: 13px; }
                             td { padding: 8px 12px; border-bottom: 1px solid #ddd; font-size: 12px; }
                             tr:nth-child(even) { background: #f9f9f9; }
+                            .duration-badge { background: #ffc107; color: #1a3a5c; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
                             .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; }
                             .print-btn { display: none; }
                             @media print { .no-print { display: none; } body { padding: 20px; } }
@@ -3123,12 +3210,13 @@
                         <div class="header">
                             <h1>The Polytechnic, Ibadan</h1>
                             <h2>Class Timetable</h2>
+                            <h3>Semester ${semester} (2-Hour Sessions)</h3>
                             <p>Generated: ${new Date().toLocaleString()}</p>
                             <p>Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}</p>
                         </div>
                         ${timetableContent}
                         <div class="footer">
-                            <p>This is a system-generated timetable. For any discrepancies, please contact the admin.</p>
+                            <p>This is a system-generated timetable. Each session is 2 hours long.</p>
                             <p>&copy; ${new Date().getFullYear()} The Polytechnic, Ibadan. All rights reserved.</p>
                         </div>
                     </body>

@@ -129,7 +129,7 @@ def add_department(payload):
     })
     return jsonify({'message': 'Department added successfully'}), 201
 
-@admin_bp.route('/departments/<dept_id>', methods=['PUT'])
+@admin_bp.route('/departments/<dept_id>', methods(['PUT'])
 @token_required
 def update_department(payload, dept_id):
     """Update a department."""
@@ -330,7 +330,7 @@ def delete_student(payload, matric):
     return jsonify({'message': 'Student deleted successfully'}), 200
 
 # ============================================================
-# STUDENT LOGIN (Matric Number + Surname)
+# STUDENT LOGIN
 # ============================================================
 
 @admin_bp.route('/timetable/student/login', methods=['POST'])
@@ -402,6 +402,7 @@ def get_student_timetable(matric):
             'student': student,
             'schedule': timetable.get('schedule', []),
             'fitness_score': timetable.get('fitness_score', 0),
+            'semester': timetable.get('semester', 1),
             'generated_at': timetable.get('generated_at')
         }), 200
         
@@ -410,7 +411,7 @@ def get_student_timetable(matric):
         return jsonify({'error': 'An error occurred'}), 500
 
 # ============================================================
-# LECTURER LOGIN (Staff ID + Surname)
+# LECTURER LOGIN
 # ============================================================
 
 @admin_bp.route('/timetable/lecturer/login', methods=['POST'])
@@ -486,6 +487,7 @@ def get_lecturer_timetable(staff_id):
             'lecturer': lecturer,
             'schedule': filtered_schedule,
             'fitness_score': timetable.get('fitness_score', 0),
+            'semester': timetable.get('semester', 1),
             'generated_at': timetable.get('generated_at')
         }), 200
         
@@ -769,7 +771,7 @@ def generate_exam_schedule(payload):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# CLASS TIMETABLE - COMPLETELY FIXED
+# CLASS TIMETABLE - WITH SEMESTER
 # ============================================================
 
 @admin_bp.route('/timetable/latest', methods=['GET'])
@@ -790,21 +792,46 @@ def get_latest_timetable(payload):
         print(f"Error getting timetable: {e}")
         return jsonify({'error': str(e)}), 500
 
+@admin_bp.route('/timetable/by-semester/<semester>', methods=['GET'])
+@token_required
+def get_timetable_by_semester(payload, semester):
+    """Get timetable by semester."""
+    try:
+        semester = int(semester)
+        timetable = db.timetables.find_one(
+            {'semester': semester},
+            sort=[('_id', -1)], 
+            projection={'_id': 0}
+        )
+        
+        if not timetable:
+            return jsonify({'error': f'No timetable found for Semester {semester}'}), 404
+        
+        return jsonify(timetable), 200
+    except Exception as e:
+        print(f"Error getting timetable: {e}")
+        return jsonify({'error': str(e)}), 500
+
 @admin_bp.route('/timetable/generate', methods=['POST'])
 @token_required
 def generate_timetable(payload):
-    """Generate class timetable using genetic algorithm."""
+    """Generate class timetable for a specific semester with 2-hour slots."""
     try:
         data = request.json or {}
         
-        # Get courses and halls
-        courses = list(db.courses.find({}, {'_id': 0}))
+        # Get semester from request
+        semester = data.get('semester', 1)
+        if semester not in [1, 2]:
+            return jsonify({'error': 'Invalid semester. Must be 1 or 2'}), 400
+        
+        # Get courses for the specified semester
+        courses = list(db.courses.find({'semester': semester}, {'_id': 0}))
         halls = list(db.halls.find({}, {'_id': 0}))
         
-        print(f"📚 Found {len(courses)} courses, {len(halls)} halls")
+        print(f"📚 Found {len(courses)} courses for Semester {semester}, {len(halls)} halls")
         
         if not courses:
-            return jsonify({'error': 'No courses found. Please add courses first.'}), 400
+            return jsonify({'error': f'No courses found for Semester {semester}. Please add courses first.'}), 400
         
         if not halls:
             return jsonify({'error': 'No halls found. Please add halls first.'}), 400
@@ -812,13 +839,21 @@ def generate_timetable(payload):
         # Prepare rooms
         room_names = [h['name'] for h in halls]
         days = data.get('days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
-        slots = data.get('slots', ['8-9', '9-10', '10-11', '11-12', '12-1', '2-3', '3-4', '4-5'])
         
-        # Convert courses to format expected by scheduler - SAFE FIELD ACCESS
+        # 2-HOUR TIME SLOTS
+        slots = data.get('slots', [
+            '8:00 - 10:00',
+            '10:00 - 12:00',
+            '12:00 - 2:00',
+            '2:00 - 4:00',
+            '4:00 - 6:00'
+        ])
+        
+        # Convert courses to format expected by scheduler
         course_data = []
         for idx, c in enumerate(courses):
             try:
-                # Safe way to get course ID - try multiple field names
+                # Safe way to get course ID
                 course_id = None
                 if 'code' in c and c['code']:
                     course_id = c['code']
@@ -847,48 +882,53 @@ def generate_timetable(payload):
                     'lecturer': lecturer_name,
                     'department': c.get('department', ''),
                     'level': c.get('level', 'ND1'),
-                    'semester': c.get('semester', 1)
+                    'semester': semester,
+                    'duration': 2
                 })
             except Exception as e:
                 print(f"⚠️ Error processing course {idx}: {e}")
-                # Add a fallback course
                 course_data.append({
                     'id': f"COURSE_{idx+1}",
                     'name': f"Course {idx+1}",
                     'lecturer': 'Unknown',
                     'department': '',
                     'level': 'ND1',
-                    'semester': 1
+                    'semester': semester,
+                    'duration': 2
                 })
         
-        print(f"🔄 Processing {len(course_data)} courses...")
+        print(f"🔄 Processing {len(course_data)} courses for Semester {semester} with 2-hour slots...")
         if course_data:
             print(f"📋 First course: {course_data[0]}")
         
-        # Generate timetable
+        # Generate timetable with 2-hour slots
         best_schedule = generate_simple_timetable(course_data, room_names, days, slots)
         fitness = calculate_fitness(best_schedule)
         
         print(f"✅ Schedule generated with fitness score: {fitness}")
-        print(f"📊 Generated {len(best_schedule)} sessions")
+        print(f"📊 Generated {len(best_schedule)} sessions (2 hours each) for Semester {semester}")
         
-        # Save timetable
+        # Save timetable with semester
         timetable_data = {
             'schedule': best_schedule,
             'fitness_score': fitness,
+            'semester': semester,
             'generated_at': datetime.utcnow().isoformat(),
             'generated_by': payload.get('username', 'admin'),
             'total_courses': len(course_data),
-            'total_sessions': len(best_schedule)
+            'total_sessions': len(best_schedule),
+            'slot_duration': '2 hours'
         }
         db.timetables.insert_one(timetable_data)
         
         return jsonify({
-            'message': 'Timetable generated successfully',
+            'message': f'Timetable generated successfully for Semester {semester} (2-hour sessions)',
             'schedule': best_schedule,
             'fitness_score': fitness,
+            'semester': semester,
             'generated_at': timetable_data['generated_at'],
-            'total_sessions': len(best_schedule)
+            'total_sessions': len(best_schedule),
+            'slot_duration': '2 hours'
         }), 200
         
     except Exception as e:
@@ -897,9 +937,8 @@ def generate_timetable(payload):
         return jsonify({'error': f'Failed to generate timetable: {str(e)}'}), 500
 
 def generate_simple_timetable(courses, rooms, days, slots):
-    """Simple timetable generation with no external dependencies."""
+    """Simple timetable generation with 2-hour slots."""
     schedule = []
-    # Distribute courses across days and times
     for i, course in enumerate(courses):
         day_idx = i % len(days)
         slot_idx = (i // len(days)) % len(slots)
@@ -910,9 +949,12 @@ def generate_simple_timetable(courses, rooms, days, slots):
             "course_name": course.get("name", f"Course {i+1}"),
             "lecturer": course.get("lecturer", "Unknown"),
             "department": course.get("department", ""),
+            "level": course.get("level", "ND1"),
+            "semester": course.get("semester", 1),
             "day": days[day_idx],
             "time": slots[slot_idx],
-            "venue": rooms[room_idx]
+            "venue": rooms[room_idx],
+            "duration": "2 hours"
         })
     return schedule
 
@@ -950,7 +992,7 @@ def delete_timetable(payload):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# PUBLIC TIMETABLE VIEW (No Auth Required)
+# PUBLIC TIMETABLE VIEW
 # ============================================================
 
 @admin_bp.route('/timetable/public', methods=['GET'])
@@ -965,6 +1007,7 @@ def get_public_timetable():
         return jsonify({
             'schedule': timetable.get('schedule', []),
             'fitness_score': timetable.get('fitness_score', 0),
+            'semester': timetable.get('semester', 1),
             'generated_at': timetable.get('generated_at')
         }), 200
     except Exception as e:
@@ -1015,7 +1058,7 @@ def get_student_courses(matric):
     }), 200
 
 # ============================================================
-# DEBUG ENDPOINT - Check Course Data Structure
+# DEBUG ENDPOINT
 # ============================================================
 
 @admin_bp.route('/debug/courses', methods=['GET'])
