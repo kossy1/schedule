@@ -19,6 +19,7 @@ class GeneticScheduler:
                 "course": course["id"],
                 "course_name": course.get("name", ""),
                 "lecturer": course.get("lecturer", "Unknown"),
+                "department": course.get("department", ""),
                 "day": random.choice(self.days),
                 "time": random.choice(self.slots),
                 "venue": random.choice(self.rooms)
@@ -29,6 +30,9 @@ class GeneticScheduler:
         """
         Calculate fitness score.
         Higher score = better schedule.
+        Penalizes:
+        - Lecturer conflicts (same lecturer at same day/time)
+        - Room conflicts (same room at same day/time)
         """
         penalties = 0
         lecturer_schedule = {}
@@ -52,6 +56,8 @@ class GeneticScheduler:
 
     def crossover(self, parent1: List[Dict], parent2: List[Dict]) -> List[Dict]:
         """Single-point crossover."""
+        if len(parent1) <= 1:
+            return parent1
         point = random.randint(1, len(parent1) - 1)
         child = parent1[:point] + parent2[point:]
         return child
@@ -70,23 +76,30 @@ class GeneticScheduler:
         # Initialize population
         population = [self.create_individual() for _ in range(self.population_size)]
         
-        for _ in range(self.generations):
+        for generation in range(self.generations):
             # Calculate fitness for all individuals
             fitness_scores = [self.fitness(ind) for ind in population]
             
             # Select best individuals (tournament selection)
             new_population = []
             for _ in range(self.population_size // 2):
-                tournament = random.sample(list(zip(population, fitness_scores)), 3)
-                winner = max(tournament, key=lambda x: x[1])[0]
-                new_population.append(winner)
+                # Tournament selection
+                tournament_size = min(3, len(population))
+                tournament_indices = random.sample(range(len(population)), tournament_size)
+                tournament_fitness = [fitness_scores[i] for i in tournament_indices]
+                winner_idx = tournament_indices[tournament_fitness.index(max(tournament_fitness))]
+                new_population.append(population[winner_idx])
             
             # Crossover and mutation
             while len(new_population) < self.population_size:
-                parent1, parent2 = random.sample(new_population, 2)
-                child = self.crossover(parent1, parent2)
-                child = self.mutate(child)
-                new_population.append(child)
+                if len(new_population) >= 2:
+                    parent1, parent2 = random.sample(new_population, 2)
+                    child = self.crossover(parent1, parent2)
+                    child = self.mutate(child)
+                    new_population.append(child)
+                else:
+                    # If not enough parents, create a new individual
+                    new_population.append(self.create_individual())
             
             population = new_population
         

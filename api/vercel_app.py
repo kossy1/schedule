@@ -12,6 +12,7 @@ from api.database import db
 from api.auth import init_admin_user
 from api.routes import bp
 from api.admin_routes import admin_bp
+from api.scheduler import GeneticScheduler  # Ensure this is imported
 
 # Create Flask app
 app = Flask(__name__)
@@ -52,6 +53,7 @@ def index():
             'login': '/api/admin/login',
             'departments': '/api/admin/departments',
             'lecturers': '/api/admin/lecturers',
+            'students': '/api/admin/students',
             'courses': '/api/admin/courses',
             'halls': '/api/admin/halls',
             'exams': '/api/admin/exams',
