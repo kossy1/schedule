@@ -11,6 +11,7 @@
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <style>
+        /* ... (keep existing styles) ... */
         :root {
             --primary: #1a3a5c;
             --primary-light: #2a5a8c;
@@ -978,7 +979,7 @@
                 </div>
             </div>
 
-            <!-- ===== COURSES SECTION WITH EDITABLE CODE ===== -->
+            <!-- ===== COURSES SECTION ===== -->
             <div id="section-courses" class="section-content">
                 <div class="content-panel">
                     <div class="panel-header">
@@ -1318,7 +1319,7 @@
         </div>
     </div>
 
-    <!-- ===== COURSE MODAL WITH EDITABLE CODE ===== -->
+    <!-- ===== COURSE MODAL ===== -->
     <div class="modal fade" id="courseModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1520,7 +1521,7 @@
         let sessionTimeLeft = 60 * 60; // 60 minutes in seconds
 
         // ========================================================
-        // AUTO-ID GENERATORS (Only for auto-generated IDs)
+        // AUTO-ID GENERATORS
         // ========================================================
         const IDGenerators = {
             department: async function() {
@@ -1531,7 +1532,6 @@
                 const count = await getCount('lecturers');
                 return `LEC-${String(count + 1).padStart(3, '0')}`;
             },
-            // Course code is now manual - no auto-generation
             hall: async function() {
                 const count = await getCount('halls');
                 return `HALL-${String(count + 1).padStart(3, '0')}`;
@@ -1555,24 +1555,22 @@
         // SESSION TIMER
         // ========================================================
         function startSessionTimer() {
-            sessionTimeLeft = 60 * 60; // Reset to 60 minutes
+            sessionTimeLeft = 60 * 60;
             updateTimerDisplay();
-            
+
             if (sessionTimerInterval) {
                 clearInterval(sessionTimerInterval);
             }
-            
+
             sessionTimerInterval = setInterval(() => {
                 sessionTimeLeft--;
                 updateTimerDisplay();
-                
+
                 if (sessionTimeLeft <= 300) {
-                    // Less than 5 minutes left - show warning color
                     document.getElementById('timerDisplay').style.color = '#dc3545';
                 }
-                
+
                 if (sessionTimeLeft <= 0) {
-                    // Session expired
                     clearInterval(sessionTimerInterval);
                     handleSessionExpired();
                 }
@@ -1582,7 +1580,7 @@
         function updateTimerDisplay() {
             const minutes = Math.floor(sessionTimeLeft / 60);
             const seconds = sessionTimeLeft % 60;
-            document.getElementById('timerDisplay').textContent = 
+            document.getElementById('timerDisplay').textContent =
                 `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
         }
 
@@ -1609,6 +1607,7 @@
                 toast = new bootstrap.Toast(toastEl, { delay: 3000 });
             }
 
+            // Check if token exists and verify it
             if (token) {
                 verifyToken();
                 startSessionTimer();
@@ -1648,7 +1647,7 @@
                 }
             });
 
-            // Auto token refresh every 14 minutes
+            // Auto token refresh every 14 minutes (only if token exists)
             setInterval(async () => {
                 if (token) {
                     try {
@@ -1659,17 +1658,22 @@
                                 'Authorization': `Bearer ${token}`
                             }
                         });
-                        
+
                         if (response.ok) {
                             const data = await response.json();
-                            token = data.token;
-                            localStorage.setItem('adminToken', token);
-                            resetSessionTimer();
-                            console.log('🔄 Token auto-refreshed at', new Date().toLocaleTimeString());
+                            if (data.token) {
+                                token = data.token;
+                                localStorage.setItem('adminToken', token);
+                                resetSessionTimer();
+                                console.log('🔄 Token auto-refreshed at', new Date().toLocaleTimeString());
+                            }
                         } else {
-                            // Token refresh failed
+                            // Token refresh failed - session expired
                             localStorage.removeItem('adminToken');
                             token = '';
+                            if (sessionTimerInterval) {
+                                clearInterval(sessionTimerInterval);
+                            }
                             document.getElementById('loginPage').style.display = 'flex';
                             document.getElementById('dashboardPage').style.display = 'none';
                             showToast('Session expired. Please login again.', 'warning');
@@ -1714,7 +1718,7 @@
         }
 
         // ========================================================
-        // API HELPER with Token Expiration and Retry
+        // API HELPER with Token Expiration Handling
         // ========================================================
         async function apiCall(endpoint, options = {}, retryCount = 0) {
             const url = endpoint.startsWith('http') ? endpoint : `${ADMIN_API}${endpoint}`;
@@ -1725,16 +1729,21 @@
             };
 
             try {
+                console.log(`📡 API Call: ${url}`, { method: options.method || 'GET' });
+
                 const response = await fetch(url, {
                     ...options,
                     headers
                 });
 
+                console.log(`📡 Response Status: ${response.status}`);
+
                 // Check if token is expired (401)
                 if (response.status === 401) {
+                    console.warn('⚠️ Token expired (401). Attempting to refresh...');
+                    
                     // Try to refresh token once
                     if (retryCount === 0 && token) {
-                        console.log('Token expired, attempting to refresh...');
                         try {
                             const refreshResponse = await fetch(`${ADMIN_API}/refresh`, {
                                 method: 'POST',
@@ -1743,21 +1752,23 @@
                                     'Authorization': `Bearer ${token}`
                                 }
                             });
-                            
+
                             if (refreshResponse.ok) {
                                 const refreshData = await refreshResponse.json();
-                                token = refreshData.token;
-                                localStorage.setItem('adminToken', token);
-                                resetSessionTimer();
-                                console.log('Token refreshed successfully, retrying request...');
-                                // Retry the original request with new token
-                                return await apiCall(endpoint, options, retryCount + 1);
+                                if (refreshData.token) {
+                                    token = refreshData.token;
+                                    localStorage.setItem('adminToken', token);
+                                    resetSessionTimer();
+                                    console.log('✅ Token refreshed successfully, retrying request...');
+                                    // Retry the original request with new token
+                                    return await apiCall(endpoint, options, retryCount + 1);
+                                }
                             }
                         } catch (refreshError) {
-                            console.error('Token refresh failed:', refreshError);
+                            console.error('❌ Token refresh failed:', refreshError);
                         }
                     }
-                    
+
                     // If refresh failed or already retried, redirect to login
                     localStorage.removeItem('adminToken');
                     token = '';
@@ -1775,12 +1786,14 @@
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
                     const text = await response.text();
+                    console.error('❌ Non-JSON response:', text.substring(0, 200));
                     throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
                 }
 
                 const data = await response.json();
 
                 if (!response.ok) {
+                    console.error('❌ API Error Response:', data);
                     throw new Error(data.error || data.message || `HTTP ${response.status}`);
                 }
 
@@ -1791,7 +1804,7 @@
 
                 return data;
             } catch (error) {
-                console.error('API Error:', error);
+                console.error('❌ API Call Error:', error);
                 throw error;
             }
         }
@@ -1809,7 +1822,8 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
 
             try {
-                // Use direct fetch for login (no token required)
+                console.log('🔑 Attempting login...');
+                
                 const response = await fetch(`${ADMIN_API}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1817,13 +1831,19 @@
                 });
 
                 const data = await response.json();
+                console.log('📡 Login Response:', { status: response.status, ok: response.ok });
 
                 if (!response.ok) {
                     throw new Error(data.error || 'Login failed');
                 }
 
+                if (!data.token) {
+                    throw new Error('No token received from server');
+                }
+
                 token = data.token;
                 localStorage.setItem('adminToken', token);
+                console.log('✅ Token stored in localStorage');
 
                 document.getElementById('adminUsername').textContent = data.user?.username || 'admin';
                 showToast('✅ Login successful!', 'success');
@@ -1832,9 +1852,10 @@
                 document.getElementById('dashboardPage').style.display = 'block';
 
                 startSessionTimer();
-                loadDashboard();
+                await loadDashboard();
 
             } catch (error) {
+                console.error('❌ Login Error:', error);
                 showToast('❌ ' + error.message, 'danger');
             } finally {
                 btn.disabled = false;
@@ -1844,11 +1865,14 @@
 
         async function verifyToken() {
             try {
+                console.log('🔍 Verifying token...');
                 await apiCall('/verify');
+                console.log('✅ Token verified successfully');
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('dashboardPage').style.display = 'block';
-                loadDashboard();
+                await loadDashboard();
             } catch (error) {
+                console.warn('⚠️ Token verification failed:', error.message);
                 // Token is invalid or expired
                 localStorage.removeItem('adminToken');
                 token = '';
@@ -1936,7 +1960,9 @@
         // ========================================================
         async function loadDashboard() {
             try {
+                console.log('📊 Loading dashboard stats...');
                 const stats = await apiCall('/stats');
+                console.log('📊 Stats received:', stats);
 
                 document.getElementById('statDepartments').textContent = stats.departments || 0;
                 document.getElementById('statLecturers').textContent = stats.lecturers || 0;
@@ -1981,6 +2007,16 @@
                     `;
             } catch (error) {
                 console.error('Error loading dashboard:', error);
+                // Show a retry button if stats fail
+                const activity = document.getElementById('recentActivity');
+                activity.innerHTML = `
+                        <div class="d-flex justify-content-between py-2">
+                            <span class="text-danger"><i class="fas fa-exclamation-circle me-2"></i>Failed to load stats</span>
+                            <button class="btn btn-sm btn-primary" onclick="loadDashboard()">
+                                <i class="fas fa-sync-alt me-1"></i> Retry
+                            </button>
+                        </div>
+                    `;
             }
         }
 
@@ -2596,7 +2632,7 @@
         }
 
         // ========================================================
-        // COURSES CRUD with EDITABLE Course Code
+        // COURSES CRUD
         // ========================================================
         async function loadCourses() {
             const body = document.getElementById('coursesBody');
@@ -2667,12 +2703,6 @@
             }
         }
 
-        // Course code is now manually entered - no auto-generation needed
-        function generateCourseCode() {
-            // This function is kept for compatibility but does nothing
-            // Course code is now manually entered by the admin
-        }
-
         async function openCourseModal(data = null) {
             document.getElementById('courseForm').reset();
             document.getElementById('courseEditId').value = '';
@@ -2683,7 +2713,6 @@
             if (data) {
                 document.getElementById('courseEditId').value = data.code;
                 document.getElementById('courseCode').value = data.code;
-                // Course code is EDITABLE in edit mode
                 document.getElementById('courseCode').disabled = false;
                 document.getElementById('courseCode').readOnly = false;
                 document.getElementById('courseName').value = data.name;
@@ -2734,7 +2763,6 @@
             const semester = parseInt(document.getElementById('courseSemester').value);
             const editId = document.getElementById('courseEditId').value;
 
-            // Validate course code
             if (!code) {
                 showToast('Please enter a course code', 'warning');
                 return;
@@ -2751,10 +2779,8 @@
                 return;
             }
 
-            // If editing, check if course code changed and if new code already exists
             if (editId && code !== editId) {
                 try {
-                    // Check if new code already exists
                     const courses = await apiCall('/courses');
                     const exists = courses.some(c => c.code === code);
                     if (exists) {
@@ -2762,7 +2788,6 @@
                         return;
                     }
                 } catch (error) {
-                    // If API fails, proceed anyway (will be caught on server side)
                     console.warn('Could not check for duplicate course code:', error);
                 }
             }
