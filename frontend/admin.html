@@ -1091,7 +1091,7 @@
                 </div>
             </div>
 
-            <!-- ===== TIMETABLE SECTION WITH LEVEL ===== -->
+            <!-- ===== TIMETABLE SECTION WITH COURSE NAME ===== -->
             <div id="section-timetable" class="section-content">
                 <div class="content-panel">
                     <div class="panel-header">
@@ -1377,7 +1377,7 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Course Name <span class="text-danger">*</span></label>
-                            <input type="text" class="form-control" id="courseName" placeholder="e.g., Introduction to Programming" required>
+                            <input type="text" class="form-control" id="courseName" placeholder="e.g., Programming with Java" required>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Department <span class="text-danger">*</span></label>
@@ -1547,14 +1547,11 @@
         // ========================================================
         const API_URL = (() => {
             const hostname = window.location.hostname;
-            // Check if running on Vercel
-            if (hostname.includes('vercel.app') || (hostname !== 'localhost' && hostname !== '127.0.0.1')) {
-                return '/api';
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:5000/api';
             }
-            return 'http://localhost:5000/api';
+            return '/api';
         })();
-
-        console.log('🌐 API_URL:', API_URL);
 
         const ADMIN_API = `${API_URL}/admin`;
         let token = localStorage.getItem('adminToken') || '';
@@ -1563,6 +1560,7 @@
         let sessionTimerInterval = null;
         let sessionTimeLeft = 60 * 60;
 
+        console.log('🌐 API_URL:', API_URL);
         console.log('🔑 Token exists:', !!token);
 
         // ========================================================
@@ -1592,7 +1590,6 @@
                 const data = await apiCall('/stats');
                 return data[collection] || 0;
             } catch (error) {
-                console.warn(`Could not get count for ${collection}:`, error);
                 return 0;
             }
         }
@@ -1647,10 +1644,6 @@
             const toastEl = document.getElementById('toastMessage');
             if (toastEl) toast = new bootstrap.Toast(toastEl, { delay: 3000 });
             
-            // Test API connection
-            testApiConnection();
-            
-            // Check if token exists and verify
             if (token) {
                 console.log('🔍 Token found, verifying...');
                 verifyToken();
@@ -1661,7 +1654,6 @@
                 document.getElementById('dashboardPage').style.display = 'none';
             }
 
-            // CSV Drag and Drop
             const dropArea = document.getElementById('csvDropArea');
             if (dropArea) {
                 dropArea.addEventListener('dragover', function(e) { e.preventDefault();
@@ -1688,24 +1680,36 @@
                     }
                 }
             });
-        });
 
-        // ========================================================
-        // TEST API CONNECTION
-        // ========================================================
-        async function testApiConnection() {
-            try {
-                console.log('🔍 Testing API connection...');
-                const response = await fetch(`${API_URL}/health`);
-                const data = await response.json();
-                console.log('✅ API Health Check:', data);
-                return true;
-            } catch (error) {
-                console.error('❌ API Connection Failed:', error);
-                showToast('⚠️ Cannot connect to API. Please check your deployment.', 'warning');
-                return false;
-            }
-        }
+            // Auto token refresh every 14 minutes
+            setInterval(async () => {
+                if (token) {
+                    try {
+                        const response = await fetch(`${ADMIN_API}/refresh`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
+                        });
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.token) {
+                                token = data.token;
+                                localStorage.setItem('adminToken', token);
+                                resetSessionTimer();
+                            }
+                        } else {
+                            localStorage.removeItem('adminToken');
+                            token = '';
+                            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
+                            document.getElementById('loginPage').style.display = 'flex';
+                            document.getElementById('dashboardPage').style.display = 'none';
+                            showToast('Session expired. Please login again.', 'warning');
+                        }
+                    } catch (error) {
+                        console.error('Auto token refresh failed:', error);
+                    }
+                }
+            }, 14 * 60 * 1000);
+        });
 
         // ========================================================
         // TOAST NOTIFICATION
@@ -1730,7 +1734,7 @@
         }
 
         // ========================================================
-        // API HELPER WITH BETTER ERROR HANDLING
+        // API HELPER
         // ========================================================
         async function apiCall(endpoint, options = {}, retryCount = 0) {
             const url = endpoint.startsWith('http') ? endpoint : `${ADMIN_API}${endpoint}`;
@@ -1739,28 +1743,8 @@
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 ...(options.headers || {})
             };
-            
             try {
-                console.log(`📡 API Call: ${url}`, { method: options.method || 'GET' });
-                
                 const response = await fetch(url, { ...options, headers });
-                
-                console.log(`📡 Response Status: ${response.status}`);
-                
-                // Check if response is JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text();
-                    console.error('❌ Non-JSON response:', text.substring(0, 300));
-                    
-                    if (text.includes('<!DOCTYPE html>') || text.includes('<html>')) {
-                        throw new Error(`Server returned HTML instead of JSON. The API endpoint may not exist. Status: ${response.status}`);
-                    }
-                    throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
-                }
-                
-                const data = await response.json();
-                
                 if (response.status === 401) {
                     if (retryCount === 0 && token) {
                         try {
@@ -1774,13 +1758,10 @@
                                     token = refreshData.token;
                                     localStorage.setItem('adminToken', token);
                                     resetSessionTimer();
-                                    console.log('✅ Token refreshed, retrying...');
                                     return await apiCall(endpoint, options, retryCount + 1);
                                 }
                             }
-                        } catch (refreshError) {
-                            console.error('Token refresh failed:', refreshError);
-                        }
+                        } catch (refreshError) { console.error('Token refresh failed:', refreshError); }
                     }
                     localStorage.removeItem('adminToken');
                     token = '';
@@ -1792,16 +1773,19 @@
                     }, 1500);
                     throw new Error('Session expired. Please login again.');
                 }
-                
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
+                }
+                const data = await response.json();
                 if (!response.ok) {
-                    console.error('❌ API Error Response:', data);
                     throw new Error(data.error || data.message || `HTTP ${response.status}`);
                 }
-                
                 if (response.status !== 401) resetSessionTimer();
                 return data;
             } catch (error) {
-                console.error('❌ API Call Error:', error);
+                console.error('API Call Error:', error);
                 throw error;
             }
         }
@@ -1814,60 +1798,26 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const btn = document.getElementById('loginBtn');
-            
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
-            
             try {
-                console.log('🔑 Attempting login...');
-                console.log('📡 API URL:', ADMIN_API);
-                
                 const response = await fetch(`${ADMIN_API}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-                
-                console.log(`📡 Login Response Status: ${response.status}`);
-                
-                // Check if response is JSON
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text();
-                    console.error('❌ Non-JSON login response:', text.substring(0, 500));
-                    
-                    if (text.includes('<!DOCTYPE html>') || text.includes('<html>')) {
-                        throw new Error('Server returned HTML. The API may not be deployed correctly. Please check your Vercel deployment.');
-                    }
-                    throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
-                }
-                
                 const data = await response.json();
-                console.log('📡 Login Response:', data);
-                
-                if (!response.ok) {
-                    throw new Error(data.error || 'Login failed');
-                }
-                
-                if (!data.token) {
-                    throw new Error('No token received from server');
-                }
-                
+                if (!response.ok) throw new Error(data.error || 'Login failed');
+                if (!data.token) throw new Error('No token received');
                 token = data.token;
                 localStorage.setItem('adminToken', token);
-                console.log('✅ Token stored in localStorage');
-                
                 document.getElementById('adminUsername').textContent = data.user?.username || 'admin';
                 showToast('✅ Login successful!', 'success');
-                
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('dashboardPage').style.display = 'block';
-                
                 startSessionTimer();
                 await loadDashboard();
-                
             } catch (error) {
-                console.error('❌ Login Error:', error);
                 showToast('❌ ' + error.message, 'danger');
             } finally {
                 btn.disabled = false;
@@ -1877,14 +1827,11 @@
 
         async function verifyToken() {
             try {
-                console.log('🔍 Verifying token...');
                 await apiCall('/verify');
-                console.log('✅ Token verified successfully');
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('dashboardPage').style.display = 'block';
                 await loadDashboard();
             } catch (error) {
-                console.warn('⚠️ Token verification failed:', error.message);
                 localStorage.removeItem('adminToken');
                 token = '';
                 if (sessionTimerInterval) clearInterval(sessionTimerInterval);
@@ -1962,24 +1909,19 @@
         // ========================================================
         async function loadDashboard() {
             try {
-                console.log('📊 Loading dashboard stats...');
                 const stats = await apiCall('/stats');
-                console.log('📊 Stats received:', stats);
-                
                 document.getElementById('statDepartments').textContent = stats.departments || 0;
                 document.getElementById('statLecturers').textContent = stats.lecturers || 0;
                 document.getElementById('statStudents').textContent = stats.students || 0;
                 document.getElementById('statCourses').textContent = stats.courses || 0;
                 document.getElementById('statHalls').textContent = stats.halls || 0;
                 document.getElementById('statExams').textContent = stats.exams || 0;
-                
                 document.getElementById('deptBadge').textContent = stats.departments || 0;
                 document.getElementById('lecturerBadge').textContent = stats.lecturers || 0;
                 document.getElementById('studentBadge').textContent = stats.students || 0;
                 document.getElementById('courseBadge').textContent = stats.courses || 0;
                 document.getElementById('hallBadge').textContent = stats.halls || 0;
                 document.getElementById('examBadge').textContent = stats.exams || 0;
-                
                 const activity = document.getElementById('recentActivity');
                 activity.innerHTML = `
                         <div class="d-flex justify-content-between py-2 border-bottom">
@@ -2855,7 +2797,7 @@
         }
 
         // ========================================================
-        // CLASS TIMETABLE WITH LEVEL
+        // CLASS TIMETABLE WITH COURSE NAME
         // ========================================================
         async function loadTimetable() {
             const display = document.getElementById('timetableDisplay');
@@ -2864,28 +2806,20 @@
 
             try {
                 const semester = document.getElementById('semesterSelect').value;
-                console.log(`📊 Loading timetable for Semester ${semester}`);
 
                 let data;
                 try {
                     data = await apiCall(`/timetable/by-semester/${semester}`);
-                    console.log('✅ Semester timetable loaded:', data);
                 } catch (error) {
-                    console.log('⚠️ Error loading semester timetable:', error.message);
-                    
-                    // If semester-specific timetable not found, try latest
                     if (error.message.includes('404') || error.message.includes('No timetable found')) {
-                        console.log('No timetable for semester, trying latest...');
                         try {
                             data = await apiCall('/timetable/latest');
-                            console.log('✅ Latest timetable loaded:', data);
                             if (data && data.semester && data.semester != semester) {
                                 showToast(
                                     `Showing latest timetable (Semester ${data.semester}). No timetable found for Semester ${semester}.`,
                                     'warning');
                             }
                         } catch (latestError) {
-                            console.log('❌ No latest timetable found:', latestError.message);
                             display.innerHTML = `
                                     <div class="empty-state">
                                         <i class="fas fa-calendar-times"></i>
@@ -2956,7 +2890,8 @@
                                     <tr>
                                         <th>Day</th>
                                         <th>Time</th>
-                                        <th>Course</th>
+                                        <th>Course Code</th>
+                                        <th>Course Name</th>
                                         <th>Level</th>
                                         <th>Lecturer</th>
                                         <th>Venue</th>
@@ -2973,11 +2908,15 @@
                         grouped[day].forEach(item => {
                             const level = item.level || 'ND1';
                             const levelDisplayName = levelDisplay[level] || level;
+                            // Get course name - use course_name or course field
+                            const courseName = item.course_name || item.course || '';
+                            const courseCode = item.course_code || '';
                             html += `
                                     <tr>
                                         <td><strong>${day}</strong></td>
                                         <td>${item.time}</td>
-                                        <td>${item.course}</td>
+                                        <td><span class="badge bg-secondary">${courseCode}</span></td>
+                                        <td><strong>${courseName}</strong></td>
                                         <td><span class="badge bg-primary">${levelDisplayName}</span></td>
                                         <td>${item.lecturer}</td>
                                         <td>${item.venue}</td>
@@ -3019,8 +2958,6 @@
 
             showLoading(true);
             try {
-                console.log(`🔄 Generating timetable for Semester ${semester}...`);
-                
                 const result = await apiCall('/timetable/generate', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -3029,8 +2966,6 @@
                         slots: ['8:00 - 10:00', '10:00 - 12:00', '12:00 - 2:00', '2:00 - 4:00', '4:00 - 6:00']
                     })
                 });
-
-                console.log('✅ Generation result:', result);
 
                 if (result && result.message) {
                     showToast(`✅ ${result.message}`, 'success');
@@ -3059,302 +2994,290 @@
             } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
-       // ========================================================
-// TIMETABLE EXPORT FUNCTIONS - ALL ENTITIES INCLUDED
-// ========================================================
+        // ========================================================
+        // TIMETABLE EXPORT FUNCTIONS WITH COURSE NAME
+        // ========================================================
 
-function getTimetableData() {
-    const display = document.getElementById('timetableDisplay');
-    const rows = display.querySelectorAll('#timetableTable tbody tr');
-    const data = [];
-    rows.forEach(row => {
-        const cells = row.querySelectorAll('td');
-        if (cells.length >= 7) {
-            data.push({
-                day: cells[0].textContent.trim(),
-                time: cells[1].textContent.trim(),
-                course_code: cells[2].textContent.trim(),
-                course_name: cells[2].textContent.trim(),
-                level: cells[3].textContent.trim(),
-                lecturer: cells[4].textContent.trim(),
-                venue: cells[5].textContent.trim(),
-                duration: cells[6].textContent.trim()
-            });
-        }
-    });
-    return data;
-}
-
-function exportTimetable(format) {
-    const data = getTimetableData();
-    if (!data || data.length === 0) {
-        showToast('No timetable data to export. Please generate a timetable first.', 'warning');
-        return;
-    }
-    switch (format) {
-        case 'pdf':
-            exportToPDF(data);
-            break;
-        case 'excel':
-            exportToExcel(data);
-            break;
-        case 'csv':
-            exportToCSV(data);
-            break;
-        default:
-            showToast('Invalid export format', 'danger');
-    }
-}
-
-function exportToPDF(data) {
-    try {
-        // Load jsPDF dynamically
-        if (typeof window.jspdf === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-            document.head.appendChild(script);
-            
-            script.onload = function() {
-                // Load autoTable plugin
-                const script2 = document.createElement('script');
-                script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
-                document.head.appendChild(script2);
-                script2.onload = function() {
-                    generatePDF(data);
-                };
-            };
-            showToast('Loading PDF library...', 'info');
-            return;
-        }
-        generatePDF(data);
-    } catch (error) {
-        console.error('PDF export error:', error);
-        showToast('Error exporting PDF: ' + error.message, 'danger');
-    }
-}
-
-function generatePDF(data) {
-    try {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('landscape', 'mm', 'a4');
-        const semester = document.getElementById('semesterSelect').value;
-        
-        // Header
-        doc.setFontSize(18);
-        doc.setTextColor(26, 58, 92);
-        doc.text('The Polytechnic, Ibadan', 14, 20);
-        doc.setFontSize(14);
-        doc.text(`Class Timetable - Semester ${semester} (2-Hour Sessions)`, 14, 30);
-        doc.setFontSize(10);
-        doc.setTextColor(100);
-        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 37);
-        doc.text(`Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}`, 14, 43);
-        doc.text(`Total Sessions: ${data.length}`, 14, 49);
-        
-        // Table data - ALL ENTITIES INCLUDED
-        const tableData = data.map(item => [
-            item.day,
-            item.time,
-            item.course_code,
-            item.level,
-            item.lecturer,
-            item.venue,
-            item.duration
-        ]);
-        
-        // Use autoTable with proper check
-        if (typeof doc.autoTable === 'function') {
-            doc.autoTable({
-                startY: 55,
-                head: [['Day', 'Time', 'Course Code', 'Level', 'Lecturer', 'Venue', 'Duration']],
-                body: tableData,
-                theme: 'striped',
-                headStyles: {
-                    fillColor: [26, 58, 92],
-                    textColor: [255, 255, 255],
-                    fontSize: 10,
-                    fontStyle: 'bold'
-                },
-                styles: {
-                    fontSize: 9,
-                    cellPadding: 3
-                },
-                columnStyles: {
-                    0: { cellWidth: 22 },
-                    1: { cellWidth: 25 },
-                    2: { cellWidth: 30 },
-                    3: { cellWidth: 20 },
-                    4: { cellWidth: 30 },
-                    5: { cellWidth: 25 },
-                    6: { cellWidth: 18 }
+        function getTimetableData() {
+            const display = document.getElementById('timetableDisplay');
+            const rows = display.querySelectorAll('#timetableTable tbody tr');
+            const data = [];
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 8) {
+                    data.push({
+                        day: cells[0].textContent.trim(),
+                        time: cells[1].textContent.trim(),
+                        course_code: cells[2].textContent.trim(),
+                        course_name: cells[3].textContent.trim(),
+                        level: cells[4].textContent.trim(),
+                        lecturer: cells[5].textContent.trim(),
+                        venue: cells[6].textContent.trim(),
+                        duration: cells[7].textContent.trim()
+                    });
                 }
             });
-        } else {
-            // Fallback: Simple table without autoTable
-            let y = 55;
-            doc.setFontSize(10);
-            doc.setTextColor(0);
-            // Headers
-            const headers = ['Day', 'Time', 'Course Code', 'Level', 'Lecturer', 'Venue', 'Duration'];
-            headers.forEach((h, i) => {
-                doc.text(h, 14 + (i * 35), y);
-            });
-            y += 10;
-            // Data
-            data.forEach(item => {
-                const row = [item.day, item.time, item.course_code, item.level, item.lecturer, item.venue, item.duration];
-                row.forEach((r, i) => {
-                    doc.text(String(r), 14 + (i * 35), y);
-                });
-                y += 8;
-                if (y > 180) {
-                    doc.addPage();
-                    y = 20;
-                }
-            });
+            return data;
         }
-        
-        // Footer
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.text(
-                `Page ${i} of ${pageCount} - The Polytechnic Ibadan Timetable - Semester ${semester}`,
-                doc.internal.pageSize.getWidth() / 2,
-                doc.internal.pageSize.getHeight() - 5,
-                { align: 'center' }
-            );
-        }
-        
-        doc.save(`timetable_semester_${semester}.pdf`);
-        showToast('✅ PDF exported successfully!', 'success');
-    } catch (error) {
-        console.error('PDF generation error:', error);
-        showToast('Error generating PDF: ' + error.message, 'danger');
-    }
-}
 
-function exportToExcel(data) {
-    try {
-        if (typeof XLSX === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-            document.head.appendChild(script);
-            script.onload = function() {
+        function exportTimetable(format) {
+            const data = getTimetableData();
+            if (!data || data.length === 0) {
+                showToast('No timetable data to export. Please generate a timetable first.', 'warning');
+                return;
+            }
+            switch (format) {
+                case 'pdf':
+                    exportToPDF(data);
+                    break;
+                case 'excel':
+                    exportToExcel(data);
+                    break;
+                case 'csv':
+                    exportToCSV(data);
+                    break;
+                default:
+                    showToast('Invalid export format', 'danger');
+            }
+        }
+
+        function exportToPDF(data) {
+            try {
+                if (typeof window.jspdf === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                    document.head.appendChild(script);
+                    script.onload = function() {
+                        const script2 = document.createElement('script');
+                        script2.src =
+                            'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+                        document.head.appendChild(script2);
+                        script2.onload = function() {
+                            generatePDF(data);
+                        };
+                    };
+                    showToast('Loading PDF library...', 'info');
+                    return;
+                }
+                generatePDF(data);
+            } catch (error) {
+                console.error('PDF export error:', error);
+                showToast('Error exporting PDF: ' + error.message, 'danger');
+            }
+        }
+
+        function generatePDF(data) {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+                const semester = document.getElementById('semesterSelect').value;
+                
+                doc.setFontSize(18);
+                doc.setTextColor(26, 58, 92);
+                doc.text('The Polytechnic, Ibadan', 14, 20);
+                doc.setFontSize(14);
+                doc.text(`Class Timetable - Semester ${semester} (2-Hour Sessions)`, 14, 30);
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 37);
+                doc.text(`Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}`, 14, 43);
+                doc.text(`Total Sessions: ${data.length}`, 14, 49);
+                
+                // Table with ALL entities including Course Name
+                const tableData = data.map(item => [
+                    item.day,
+                    item.time,
+                    item.course_code,
+                    item.course_name,
+                    item.level,
+                    item.lecturer,
+                    item.venue,
+                    item.duration
+                ]);
+                
+                if (typeof doc.autoTable === 'function') {
+                    doc.autoTable({
+                        startY: 55,
+                        head: [
+                            ['Day', 'Time', 'Code', 'Course Name', 'Level', 'Lecturer', 'Venue', 'Duration']
+                        ],
+                        body: tableData,
+                        theme: 'striped',
+                        headStyles: {
+                            fillColor: [26, 58, 92],
+                            textColor: [255, 255, 255],
+                            fontSize: 9,
+                            fontStyle: 'bold'
+                        },
+                        styles: {
+                            fontSize: 8,
+                            cellPadding: 2
+                        },
+                        columnStyles: {
+                            0: { cellWidth: 18 },
+                            1: { cellWidth: 22 },
+                            2: { cellWidth: 18 },
+                            3: { cellWidth: 35 },
+                            4: { cellWidth: 15 },
+                            5: { cellWidth: 25 },
+                            6: { cellWidth: 20 },
+                            7: { cellWidth: 15 }
+                        }
+                    });
+                } else {
+                    // Fallback
+                    let y = 55;
+                    doc.setFontSize(9);
+                    const headers = ['Day', 'Time', 'Code', 'Course Name', 'Level', 'Lecturer', 'Venue', 'Duration'];
+                    headers.forEach((h, i) => {
+                        doc.text(h, 14 + (i * 28), y);
+                    });
+                    y += 8;
+                    data.forEach(item => {
+                        const row = [item.day, item.time, item.course_code, item.course_name, item.level, item
+                            .lecturer, item.venue, item.duration
+                        ];
+                        row.forEach((r, i) => {
+                            doc.text(String(r), 14 + (i * 28), y);
+                        });
+                        y += 6;
+                        if (y > 180) { doc.addPage();
+                            y = 20; }
+                    });
+                }
+                
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(150);
+                    doc.text(
+                        `Page ${i} of ${pageCount} - The Polytechnic Ibadan Timetable - Semester ${semester}`,
+                        doc.internal.pageSize.getWidth() / 2,
+                        doc.internal.pageSize.getHeight() - 5, { align: 'center' }
+                    );
+                }
+                
+                doc.save(`timetable_semester_${semester}.pdf`);
+                showToast('✅ PDF exported successfully!', 'success');
+            } catch (error) {
+                console.error('PDF generation error:', error);
+                showToast('Error generating PDF: ' + error.message, 'danger');
+            }
+        }
+
+        function exportToExcel(data) {
+            try {
+                if (typeof XLSX === 'undefined') {
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                    document.head.appendChild(script);
+                    script.onload = function() {
+                        generateExcel(data);
+                    };
+                    showToast('Loading Excel library...', 'info');
+                    return;
+                }
                 generateExcel(data);
-            };
-            showToast('Loading Excel library...', 'info');
-            return;
+            } catch (error) {
+                console.error('Excel export error:', error);
+                showToast('Error exporting Excel: ' + error.message, 'danger');
+            }
         }
-        generateExcel(data);
-    } catch (error) {
-        console.error('Excel export error:', error);
-        showToast('Error exporting Excel: ' + error.message, 'danger');
-    }
-}
 
-function generateExcel(data) {
-    try {
-        const semester = document.getElementById('semesterSelect').value;
-        
-        // ALL ENTITIES INCLUDED
-        const excelData = [
-            ['The Polytechnic, Ibadan'],
-            [`Class Timetable - Semester ${semester} (2-Hour Sessions)`],
-            [`Generated: ${new Date().toLocaleString()}`],
-            [`Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}`],
-            [`Total Sessions: ${data.length}`],
-            [],
-            ['Day', 'Time', 'Course Code', 'Level', 'Lecturer', 'Venue', 'Duration']
-        ];
-        
-        data.forEach(item => {
-            excelData.push([
-                item.day,
-                item.time,
-                item.course_code,
-                item.level,
-                item.lecturer,
-                item.venue,
-                item.duration
-            ]);
-        });
-        
-        excelData.push([]);
-        excelData.push(['Summary']);
-        excelData.push(['Semester:', semester]);
-        excelData.push(['Session Duration:', '2 hours']);
-        excelData.push(['Total Sessions:', data.length]);
-        
-        const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.aoa_to_sheet(excelData);
-        
-        // Set column widths
-        ws['!cols'] = [
-            { wch: 15 },
-            { wch: 20 },
-            { wch: 25 },
-            { wch: 15 },
-            { wch: 25 },
-            { wch: 20 },
-            { wch: 15 }
-        ];
-        
-        // Merge title cells
-        ws['!merges'] = [
-            { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
-            { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
-            { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } },
-            { s: { r: 3, c: 0 }, e: { r: 3, c: 6 } },
-            { s: { r: 4, c: 0 }, e: { r: 4, c: 6 } }
-        ];
-        
-        XLSX.utils.book_append_sheet(wb, ws, `Semester_${semester}`);
-        XLSX.writeFile(wb, `timetable_semester_${semester}.xlsx`);
-        showToast('✅ Excel exported successfully!', 'success');
-    } catch (error) {
-        console.error('Excel generation error:', error);
-        showToast('Error generating Excel: ' + error.message, 'danger');
-    }
-}
+        function generateExcel(data) {
+            try {
+                const semester = document.getElementById('semesterSelect').value;
+                
+                const excelData = [
+                    ['The Polytechnic, Ibadan'],
+                    [`Class Timetable - Semester ${semester} (2-Hour Sessions)`],
+                    [`Generated: ${new Date().toLocaleString()}`],
+                    [`Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}`],
+                    [`Total Sessions: ${data.length}`],
+                    [],
+                    ['Day', 'Time', 'Code', 'Course Name', 'Level', 'Lecturer', 'Venue', 'Duration']
+                ];
+                
+                data.forEach(item => {
+                    excelData.push([
+                        item.day,
+                        item.time,
+                        item.course_code,
+                        item.course_name,
+                        item.level,
+                        item.lecturer,
+                        item.venue,
+                        item.duration
+                    ]);
+                });
+                
+                excelData.push([]);
+                excelData.push(['Summary']);
+                excelData.push(['Semester:', semester]);
+                excelData.push(['Session Duration:', '2 hours']);
+                excelData.push(['Total Sessions:', data.length]);
+                
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(excelData);
+                
+                ws['!cols'] = [
+                    { wch: 12 }, { wch: 18 }, { wch: 12 }, { wch: 30 },
+                    { wch: 12 }, { wch: 22 }, { wch: 18 }, { wch: 12 }
+                ];
+                
+                ws['!merges'] = [
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 7 } },
+                    { s: { r: 1, c: 0 }, e: { r: 1, c: 7 } },
+                    { s: { r: 2, c: 0 }, e: { r: 2, c: 7 } },
+                    { s: { r: 3, c: 0 }, e: { r: 3, c: 7 } },
+                    { s: { r: 4, c: 0 }, e: { r: 4, c: 7 } }
+                ];
+                
+                XLSX.utils.book_append_sheet(wb, ws, `Semester_${semester}`);
+                XLSX.writeFile(wb, `timetable_semester_${semester}.xlsx`);
+                showToast('✅ Excel exported successfully!', 'success');
+            } catch (error) {
+                console.error('Excel generation error:', error);
+                showToast('Error generating Excel: ' + error.message, 'danger');
+            }
+        }
 
-function exportToCSV(data) {
-    try {
-        const semester = document.getElementById('semesterSelect').value;
-        
-        // ALL ENTITIES INCLUDED
-        let csv = 'The Polytechnic, Ibadan\n';
-        csv += `Class Timetable - Semester ${semester} (2-Hour Sessions)\n`;
-        csv += `Generated: ${new Date().toLocaleString()}\n`;
-        csv += `Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}\n`;
-        csv += `Total Sessions: ${data.length}\n\n`;
-        csv += 'Day,Time,Course Code,Level,Lecturer,Venue,Duration\n';
-        
-        data.forEach(item => {
-            csv += `${item.day},${item.time},"${item.course_code}",${item.level},"${item.lecturer}",${item.venue},${item.duration}\n`;
-        });
-        
-        csv += `\nSummary\n`;
-        csv += `Semester: ${semester}\n`;
-        csv += `Session Duration: 2 hours\n`;
-        csv += `Total Sessions: ${data.length}\n`;
-        
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const link = document.createElement('a');
-        link.href = URL.createObjectURL(blob);
-        link.download = `timetable_semester_${semester}.csv`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-        showToast('✅ CSV exported successfully!', 'success');
-    } catch (error) {
-        console.error('CSV export error:', error);
-        showToast('Error exporting CSV: ' + error.message, 'danger');
-    }
-}
+        function exportToCSV(data) {
+            try {
+                const semester = document.getElementById('semesterSelect').value;
+                
+                let csv = 'The Polytechnic, Ibadan\n';
+                csv += `Class Timetable - Semester ${semester} (2-Hour Sessions)\n`;
+                csv += `Generated: ${new Date().toLocaleString()}\n`;
+                csv += `Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}\n`;
+                csv += `Total Sessions: ${data.length}\n\n`;
+                csv += 'Day,Time,Code,Course Name,Level,Lecturer,Venue,Duration\n';
+                
+                data.forEach(item => {
+                    csv +=
+                        `${item.day},${item.time},"${item.course_code}","${item.course_name}",${item.level},"${item.lecturer}",${item.venue},${item.duration}\n`;
+                });
+                
+                csv += `\nSummary\n`;
+                csv += `Semester: ${semester}\n`;
+                csv += `Session Duration: 2 hours\n`;
+                csv += `Total Sessions: ${data.length}\n`;
+                
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = `timetable_semester_${semester}.csv`;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+                showToast('✅ CSV exported successfully!', 'success');
+            } catch (error) {
+                console.error('CSV export error:', error);
+                showToast('Error exporting CSV: ' + error.message, 'danger');
+            }
+        }
 
         function printTimetable() {
             const printWindow = window.open('', '_blank');

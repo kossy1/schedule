@@ -571,7 +571,7 @@ def get_lecturer_timetable(staff_id):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# COURSES CRUD - FIXED SYNTAX
+# COURSES CRUD
 # ============================================================
 
 @admin_bp.route('/courses', methods=['GET'])
@@ -972,14 +972,14 @@ def generate_timetable(payload):
             '4:00 - 6:00'
         ])
         
-        # Convert courses to format expected by scheduler with course name
+        # Convert courses to format expected by scheduler with FULL COURSE NAME
         course_data = []
         for idx, c in enumerate(courses):
             try:
                 # Safe way to get course ID
                 course_id = c.get('code') or c.get('id') or f"COURSE_{idx+1}"
                 
-                # Get course name
+                # Get FULL course name (e.g., "Introduction to Programming", "Programming with Java")
                 course_name = c.get('name', f'Course {course_id}')
                 
                 # Get lecturer name
@@ -993,7 +993,8 @@ def generate_timetable(payload):
                 
                 course_data.append({
                     'id': course_id,
-                    'name': course_name,
+                    'name': course_name,  # Full course name
+                    'code': course_id,    # Course code
                     'lecturer': lecturer_name,
                     'department': c.get('department', ''),
                     'level': c.get('level', 'ND1'),
@@ -1005,6 +1006,7 @@ def generate_timetable(payload):
                 course_data.append({
                     'id': f"COURSE_{idx+1}",
                     'name': f"Course {idx+1}",
+                    'code': f"COURSE_{idx+1}",
                     'lecturer': 'Unknown',
                     'department': '',
                     'level': 'ND1',
@@ -1016,7 +1018,7 @@ def generate_timetable(payload):
         if course_data:
             print(f"📋 First course: {course_data[0]}")
         
-        # Generate timetable with 2-hour slots and course name
+        # Generate timetable with 2-hour slots and full course name
         best_schedule = generate_simple_timetable(course_data, room_names, days, slots)
         fitness = calculate_fitness(best_schedule)
         
@@ -1052,7 +1054,7 @@ def generate_timetable(payload):
         return jsonify({'error': f'Failed to generate timetable: {str(e)}'}), 500
 
 def generate_simple_timetable(courses, rooms, days, slots):
-    """Simple timetable generation with 2-hour slots and course name."""
+    """Simple timetable generation with 2-hour slots and FULL COURSE NAME."""
     schedule = []
     for i, course in enumerate(courses):
         day_idx = i % len(days)
@@ -1060,9 +1062,9 @@ def generate_simple_timetable(courses, rooms, days, slots):
         room_idx = (i + slot_idx) % len(rooms)
         
         schedule.append({
-            "course_code": course.get("id", f"COURSE_{i+1}"),
-            "course": course.get("name", f"Course {i+1}"),
-            "course_name": course.get("name", f"Course {i+1}"),
+            "course_code": course.get("code", f"COURSE_{i+1}"),
+            "course": course.get("name", f"Course {i+1}"),  # Full course name
+            "course_name": course.get("name", f"Course {i+1}"),  # Full course name
             "lecturer": course.get("lecturer", "Unknown"),
             "department": course.get("department", ""),
             "level": course.get("level", "ND1"),
