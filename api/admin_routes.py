@@ -256,7 +256,7 @@ def update_lecturer(payload, lecturer_id):
         print(f"Update lecturer error: {e}")
         return jsonify({'error': str(e)}), 500
 
-@admin_bp.route('/lecturers/<lecturer_id>', methods=['DELETE'])
+@admin_bp.route('/lecturers/<lecturer_id>', methods(['DELETE'])
 @token_required
 def delete_lecturer(payload, lecturer_id):
     """Delete a lecturer."""
@@ -878,7 +878,7 @@ def generate_exam_schedule(payload):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# CLASS TIMETABLE
+# CLASS TIMETABLE WITH LEVEL
 # ============================================================
 
 @admin_bp.route('/timetable/latest', methods=['GET'])
@@ -922,7 +922,7 @@ def get_timetable_by_semester(payload, semester):
 @admin_bp.route('/timetable/generate', methods=['POST'])
 @token_required
 def generate_timetable(payload):
-    """Generate class timetable for a specific semester with 2-hour slots."""
+    """Generate class timetable for a specific semester with 2-hour slots and level."""
     try:
         data = request.json or {}
         
@@ -1036,7 +1036,7 @@ def generate_timetable(payload):
         return jsonify({'error': f'Failed to generate timetable: {str(e)}'}), 500
 
 def generate_simple_timetable(courses, rooms, days, slots):
-    """Simple timetable generation with 2-hour slots."""
+    """Simple timetable generation with 2-hour slots and level."""
     schedule = []
     for i, course in enumerate(courses):
         day_idx = i % len(days)

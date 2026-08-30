@@ -726,43 +726,6 @@
             background: var(--primary);
             color: white;
         }
-        
-        /* Duration badge */
-        .duration-badge {
-            background: #ffc107;
-            color: #1a3a5c;
-            padding: 2px 10px;
-            border-radius: 20px;
-            font-size: 0.7rem;
-            font-weight: 600;
-        }
-        
-        /* Semester selector */
-        .semester-selector {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        .semester-selector label {
-            font-weight: 600;
-            font-size: 0.85rem;
-            color: var(--primary);
-            margin: 0;
-        }
-        .semester-selector select {
-            border-radius: 20px;
-            padding: 4px 12px;
-            border: 2px solid #e2e8f0;
-            font-size: 0.85rem;
-            font-weight: 500;
-            color: var(--primary);
-            background: white;
-            cursor: pointer;
-        }
-        .semester-selector select:focus {
-            border-color: var(--secondary);
-            outline: none;
-        }
     </style>
 </head>
 <body>
@@ -1128,7 +1091,7 @@
                 </div>
             </div>
 
-            <!-- ===== TIMETABLE SECTION WITH SEMESTER SELECTOR ===== -->
+            <!-- ===== TIMETABLE SECTION WITH LEVEL ===== -->
             <div id="section-timetable" class="section-content">
                 <div class="content-panel">
                     <div class="panel-header">
@@ -2821,7 +2784,7 @@
         }
 
         // ========================================================
-        // CLASS TIMETABLE WITH SEMESTER SELECTION
+        // CLASS TIMETABLE WITH LEVEL
         // ========================================================
         async function loadTimetable() {
             const display = document.getElementById('timetableDisplay');
@@ -2835,19 +2798,31 @@
                 try {
                     data = await apiCall(`/timetable/by-semester/${semester}`);
                 } catch (error) {
-                    if (error.message.includes('404')) {
-                        data = await apiCall('/timetable/latest');
-                        if (data && data.semester && data.semester != semester) {
-                            showToast(
-                                `Showing latest timetable (Semester ${data.semester}). No timetable found for Semester ${semester}.`,
-                                'warning');
+                    if (error.message.includes('404') || error.message.includes('No timetable found')) {
+                        console.log('No timetable for semester, trying latest...');
+                        try {
+                            data = await apiCall('/timetable/latest');
+                            if (data && data.semester && data.semester != semester) {
+                                showToast(
+                                    `Showing latest timetable (Semester ${data.semester}). No timetable found for Semester ${semester}.`,
+                                    'warning');
+                            }
+                        } catch (latestError) {
+                            display.innerHTML = `
+                                    <div class="empty-state">
+                                        <i class="fas fa-calendar-times"></i>
+                                        <p>No timetable found for Semester ${semester}.</p>
+                                        <small class="text-muted">Select semester and click "Generate" to create one.</small>
+                                    </div>
+                                `;
+                            return;
                         }
                     } else {
                         throw error;
                     }
                 }
 
-                if (!data.schedule || data.schedule.length === 0) {
+                if (!data || !data.schedule || data.schedule.length === 0) {
                     display.innerHTML = `
                             <div class="empty-state">
                                 <i class="fas fa-calendar-times"></i>
@@ -2864,6 +2839,14 @@
                     acc[day].push(item);
                     return acc;
                 }, {});
+
+                // Level display mapping
+                const levelDisplay = {
+                    'ND1': 'ND I',
+                    'ND2': 'ND II',
+                    'HND1': 'HND I',
+                    'HND2': 'HND II'
+                };
 
                 let html = `
                         <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -2896,6 +2879,7 @@
                                         <th>Day</th>
                                         <th>Time</th>
                                         <th>Course</th>
+                                        <th>Level</th>
                                         <th>Lecturer</th>
                                         <th>Venue</th>
                                         <th>Duration</th>
@@ -2909,11 +2893,14 @@
                     if (grouped[day]) {
                         grouped[day].sort((a, b) => a.time.localeCompare(b.time));
                         grouped[day].forEach(item => {
+                            const level = item.level || 'ND1';
+                            const levelDisplayName = levelDisplay[level] || level;
                             html += `
                                     <tr>
                                         <td><strong>${day}</strong></td>
                                         <td>${item.time}</td>
                                         <td>${item.course}</td>
+                                        <td><span class="badge bg-primary">${levelDisplayName}</span></td>
                                         <td>${item.lecturer}</td>
                                         <td>${item.venue}</td>
                                         <td><span class="badge bg-warning">${item.duration || '2 hours'}</span></td>
@@ -2932,18 +2919,17 @@
                 display.innerHTML = html;
 
             } catch (error) {
-                if (error.message.includes('404')) {
-                    const semester = document.getElementById('semesterSelect').value;
-                    display.innerHTML = `
-                            <div class="empty-state">
-                                <i class="fas fa-calendar-times"></i>
-                                <p>No timetable found for Semester ${semester}.</p>
-                                <small class="text-muted">Select semester and click "Generate" to create one.</small>
-                            </div>
-                        `;
-                } else {
-                    display.innerHTML = `<p class="text-danger text-center py-4">${error.message}</p>`;
-                }
+                console.error('Error loading timetable:', error);
+                const semester = document.getElementById('semesterSelect').value;
+                display.innerHTML = `
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-triangle text-danger"></i>
+                            <p>Error loading timetable: ${error.message}</p>
+                            <button class="btn btn-primary mt-3" onclick="loadTimetable()">
+                                <i class="fas fa-sync-alt me-1"></i> Retry
+                            </button>
+                        </div>
+                    `;
             }
         }
 
@@ -2955,7 +2941,7 @@
 
             showLoading(true);
             try {
-                await apiCall('/timetable/generate', {
+                const result = await apiCall('/timetable/generate', {
                     method: 'POST',
                     body: JSON.stringify({
                         semester: parseInt(semester),
@@ -2964,10 +2950,15 @@
                     })
                 });
 
-                showToast(`✅ Timetable generated for Semester ${semester} with 2-hour sessions!`, 'success');
+                if (result && result.message) {
+                    showToast(`✅ ${result.message}`, 'success');
+                } else {
+                    showToast(`✅ Timetable generated for Semester ${semester}!`, 'success');
+                }
                 loadTimetable();
                 loadDashboard();
             } catch (error) {
+                console.error('Generate timetable error:', error);
                 showToast('❌ ' + error.message, 'danger');
                 loadTimetable();
             } finally {
@@ -2987,7 +2978,7 @@
         }
 
         // ========================================================
-        // TIMETABLE EXPORT FUNCTIONS
+        // TIMETABLE EXPORT FUNCTIONS WITH LEVEL
         // ========================================================
         function getTimetableData() {
             const display = document.getElementById('timetableDisplay');
@@ -2995,14 +2986,15 @@
             const data = [];
             rows.forEach(row => {
                 const cells = row.querySelectorAll('td');
-                if (cells.length >= 6) {
+                if (cells.length >= 7) {
                     data.push({
                         day: cells[0].textContent.trim(),
                         time: cells[1].textContent.trim(),
                         course: cells[2].textContent.trim(),
-                        lecturer: cells[3].textContent.trim(),
-                        venue: cells[4].textContent.trim(),
-                        duration: cells[5].textContent.trim()
+                        level: cells[3].textContent.trim(),
+                        lecturer: cells[4].textContent.trim(),
+                        venue: cells[5].textContent.trim(),
+                        duration: cells[6].textContent.trim()
                     });
                 }
             });
@@ -3059,21 +3051,28 @@
                 doc.setFontSize(10);
                 doc.setTextColor(100);
                 doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 37);
-                const tableData = data.map(item => [item.day, item.time, item.course, item.lecturer, item.venue, item
-                    .duration
+                const tableData = data.map(item => [item.day, item.time, item.course, item.level, item.lecturer, item
+                    .venue, item.duration
                 ]);
                 doc.autoTable({
                     startY: 45,
                     head: [
-                        ['Day', 'Time', 'Course', 'Lecturer', 'Venue', 'Duration']
+                        ['Day', 'Time', 'Course', 'Level', 'Lecturer', 'Venue', 'Duration']
                     ],
                     body: tableData,
                     theme: 'striped',
                     headStyles: { fillColor: [26, 58, 92], textColor: [255, 255, 255], fontSize: 10,
                         fontStyle: 'bold' },
                     styles: { fontSize: 9, cellPadding: 3 },
-                    columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 30 }, 2: { cellWidth: 45 },
-                        3: { cellWidth: 40 }, 4: { cellWidth: 25 }, 5: { cellWidth: 20 } }
+                    columnStyles: {
+                        0: { cellWidth: 22 },
+                        1: { cellWidth: 25 },
+                        2: { cellWidth: 35 },
+                        3: { cellWidth: 20 },
+                        4: { cellWidth: 30 },
+                        5: { cellWidth: 22 },
+                        6: { cellWidth: 18 }
+                    }
                 });
                 const pageCount = doc.internal.getNumberOfPages();
                 for (let i = 1; i <= pageCount; i++) {
@@ -3114,10 +3113,12 @@
                     [`Class Timetable - Semester ${semester} (2-Hour Sessions)`],
                     [`Generated: ${new Date().toLocaleString()}`],
                     [],
-                    ['Day', 'Time', 'Course', 'Lecturer', 'Venue', 'Duration']
+                    ['Day', 'Time', 'Course', 'Level', 'Lecturer', 'Venue', 'Duration']
                 ];
                 data.forEach(item => {
-                    excelData.push([item.day, item.time, item.course, item.lecturer, item.venue, item.duration]);
+                    excelData.push([item.day, item.time, item.course, item.level, item.lecturer, item.venue, item
+                        .duration
+                    ]);
                 });
                 excelData.push([]);
                 excelData.push(['Total Sessions:', data.length]);
@@ -3126,11 +3127,12 @@
                 excelData.push(['Generated By:', document.getElementById('adminUsername').textContent || 'Admin']);
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.aoa_to_sheet(excelData);
-                ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 25 }, { wch: 20 }, { wch: 15 }];
+                ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 25 }, { wch: 20 },
+                { wch: 15 }];
                 ws['!merges'] = [
-                    { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
-                    { s: { r: 1, c: 0 }, e: { r: 1, c: 5 } },
-                    { s: { r: 2, c: 0 }, e: { r: 2, c: 5 } }
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+                    { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
+                    { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } }
                 ];
                 XLSX.utils.book_append_sheet(wb, ws, `Semester_${semester}`);
                 XLSX.writeFile(wb, `timetable_semester_${semester}.xlsx`);
@@ -3147,10 +3149,10 @@
                 let csv = 'The Polytechnic, Ibadan\n';
                 csv += `Class Timetable - Semester ${semester} (2-Hour Sessions)\n`;
                 csv += `Generated: ${new Date().toLocaleString()}\n\n`;
-                csv += 'Day,Time,Course,Lecturer,Venue,Duration\n';
+                csv += 'Day,Time,Course,Level,Lecturer,Venue,Duration\n';
                 data.forEach(item => {
                     csv +=
-                    `${item.day},${item.time},"${item.course}","${item.lecturer}",${item.venue},${item.duration}\n`;
+                    `${item.day},${item.time},"${item.course}",${item.level},"${item.lecturer}",${item.venue},${item.duration}\n`;
                 });
                 csv += `\nTotal Sessions: ${data.length}\n`;
                 csv += `Session Duration: 2 hours\n`;
@@ -3192,6 +3194,7 @@
                             th { background: #1a3a5c; color: white; padding: 10px 12px; text-align: left; font-size: 13px; }
                             td { padding: 8px 12px; border-bottom: 1px solid #ddd; font-size: 12px; }
                             tr:nth-child(even) { background: #f9f9f9; }
+                            .level-badge { background: #1a3a5c; color: white; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
                             .duration-badge { background: #ffc107; color: #1a3a5c; padding: 2px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; display: inline-block; }
                             .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; }
                             .print-btn { display: none; }
