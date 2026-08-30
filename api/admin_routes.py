@@ -533,7 +533,7 @@ def lecturer_login():
 # LECTURER TIMETABLE VIEW
 # ============================================================
 
-@admin_bp.route('/timetable/lecturer/<staff_id>', methods(['GET'])
+@admin_bp.route('/timetable/lecturer/<staff_id>', methods=['GET'])
 def get_lecturer_timetable(staff_id):
     """Get timetable for a specific lecturer by staff ID."""
     try:
@@ -571,7 +571,7 @@ def get_lecturer_timetable(staff_id):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# COURSES CRUD
+# COURSES CRUD - FIXED SYNTAX
 # ============================================================
 
 @admin_bp.route('/courses', methods=['GET'])
@@ -874,11 +874,9 @@ def generate_exam_schedule(payload):
             exam_slots.append({
                 'id': f'EXAM{idx+1:03d}',
                 'course': course.get('code', course.get('id', f'COURSE{idx+1}')),
-                'course_name': course.get('name', ''),
                 'date': day,
                 'time': time,
                 'hall': hall['id'],
-                'hall_name': hall['name'],
                 'duration': '2 hours'
             })
             idx += 1
@@ -1054,7 +1052,7 @@ def generate_timetable(payload):
         return jsonify({'error': f'Failed to generate timetable: {str(e)}'}), 500
 
 def generate_simple_timetable(courses, rooms, days, slots):
-    """Simple timetable generation with 2-hour slots, course name, and all entities."""
+    """Simple timetable generation with 2-hour slots and course name."""
     schedule = []
     for i, course in enumerate(courses):
         day_idx = i % len(days)
