@@ -50,6 +50,35 @@ def verify_token(payload):
     """Verify token validity."""
     return jsonify({'valid': True, 'user': payload}), 200
 
+# ============================================================
+# TOKEN REFRESH - NEW ENDPOINT
+# ============================================================
+
+@admin_bp.route('/refresh', methods=['POST'])
+@token_required
+def refresh_token(payload):
+    """Refresh the JWT token."""
+    try:
+        from .auth import generate_token
+        user_id = payload.get('user_id')
+        username = payload.get('username')
+        
+        if not user_id or not username:
+            return jsonify({'error': 'Invalid token payload'}), 400
+        
+        new_token = generate_token(user_id, username)
+        return jsonify({
+            'token': new_token,
+            'message': 'Token refreshed successfully'
+        }), 200
+    except Exception as e:
+        print(f"Token refresh error: {e}")
+        return jsonify({'error': 'Failed to refresh token'}), 500
+
+# ============================================================
+# STATS
+# ============================================================
+
 @admin_bp.route('/stats', methods=['GET'])
 @token_required
 def get_stats(payload):
