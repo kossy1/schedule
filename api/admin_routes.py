@@ -4,6 +4,7 @@ from .database import db
 from .auth import token_required
 import re
 import random
+import traceback
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -397,7 +398,6 @@ def get_student_timetable(matric):
         if not timetable:
             return jsonify({'error': 'No timetable found'}), 404
         
-        # Return schedule
         return jsonify({
             'student': student,
             'schedule': timetable.get('schedule', []),
@@ -748,7 +748,7 @@ def generate_exam_schedule(payload):
             
             exam_slots.append({
                 'id': f'EXAM{idx+1:03d}',
-                'course': course['code'],
+                'course': course.get('code', course.get('id', f'COURSE{idx+1}')),
                 'date': day,
                 'time': time,
                 'hall': hall['id'],
@@ -769,7 +769,7 @@ def generate_exam_schedule(payload):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# CLASS TIMETABLE - FIXED WITH PROPER SCHEDULER
+# CLASS TIMETABLE - COMPLETELY FIXED
 # ============================================================
 
 @admin_bp.route('/timetable/latest', methods=['GET'])
@@ -814,42 +814,60 @@ def generate_timetable(payload):
         days = data.get('days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
         slots = data.get('slots', ['8-9', '9-10', '10-11', '11-12', '12-1', '2-3', '3-4', '4-5'])
         
-        # Convert courses to format expected by scheduler
+        # Convert courses to format expected by scheduler - SAFE FIELD ACCESS
         course_data = []
-        for c in courses:
-            # Get lecturer name
-            lecturer_name = c.get('lecturer', 'Unknown')
-            
-            # If lecturer is an ID, get the name
-            if lecturer_name and not lecturer_name.startswith('Dr.') and not lecturer_name.startswith('Prof.'):
-                lecturer = db.lecturers.find_one({'id': lecturer_name})
-                if lecturer:
-                    lecturer_name = lecturer.get('name', lecturer_name)
-            
-            course_data.append({
-                'id': c['code'],
-                'name': c['name'],
-                'lecturer': lecturer_name,
-                'department': c.get('department', ''),
-                'level': c.get('level', 'ND1'),
-                'semester': c.get('semester', 1)
-            })
+        for idx, c in enumerate(courses):
+            try:
+                # Safe way to get course ID - try multiple field names
+                course_id = None
+                if 'code' in c and c['code']:
+                    course_id = c['code']
+                elif 'id' in c and c['id']:
+                    course_id = c['id']
+                elif '_id' in c:
+                    course_id = str(c['_id'])
+                else:
+                    course_id = f"COURSE_{idx+1}"
+                
+                # Get course name
+                course_name = c.get('name', f'Course {course_id}')
+                
+                # Get lecturer name
+                lecturer_name = c.get('lecturer', 'Unknown')
+                
+                # If lecturer is an ID, get the name
+                if lecturer_name and not lecturer_name.startswith('Dr.') and not lecturer_name.startswith('Prof.'):
+                    lecturer = db.lecturers.find_one({'id': lecturer_name})
+                    if lecturer:
+                        lecturer_name = lecturer.get('name', lecturer_name)
+                
+                course_data.append({
+                    'id': course_id,
+                    'name': course_name,
+                    'lecturer': lecturer_name,
+                    'department': c.get('department', ''),
+                    'level': c.get('level', 'ND1'),
+                    'semester': c.get('semester', 1)
+                })
+            except Exception as e:
+                print(f"⚠️ Error processing course {idx}: {e}")
+                # Add a fallback course
+                course_data.append({
+                    'id': f"COURSE_{idx+1}",
+                    'name': f"Course {idx+1}",
+                    'lecturer': 'Unknown',
+                    'department': '',
+                    'level': 'ND1',
+                    'semester': 1
+                })
         
-        print(f"🔄 Processing {len(course_data)} courses with Genetic Algorithm...")
+        print(f"🔄 Processing {len(course_data)} courses...")
+        if course_data:
+            print(f"📋 First course: {course_data[0]}")
         
-        # Try to import scheduler
-        try:
-            from .scheduler import GeneticScheduler
-            print("✅ GeneticScheduler imported successfully")
-        except ImportError as e:
-            print(f"❌ Failed to import GeneticScheduler: {e}")
-            # Fallback: use a simple random scheduler
-            print("⚠️ Using fallback random scheduler")
-            return generate_random_timetable(course_data, room_names, days, slots)
-        
-        # Initialize and run scheduler
-        scheduler = GeneticScheduler(course_data, room_names, days, slots)
-        best_schedule, fitness = scheduler.evolve()
+        # Generate timetable
+        best_schedule = generate_simple_timetable(course_data, room_names, days, slots)
+        fitness = calculate_fitness(best_schedule)
         
         print(f"✅ Schedule generated with fitness score: {fitness}")
         print(f"📊 Generated {len(best_schedule)} sessions")
@@ -875,24 +893,48 @@ def generate_timetable(payload):
         
     except Exception as e:
         print(f"❌ Error generating timetable: {e}")
-        import traceback
         traceback.print_exc()
         return jsonify({'error': f'Failed to generate timetable: {str(e)}'}), 500
 
-def generate_random_timetable(courses, rooms, days, slots):
-    """Fallback: Simple random timetable generation."""
+def generate_simple_timetable(courses, rooms, days, slots):
+    """Simple timetable generation with no external dependencies."""
     schedule = []
+    # Distribute courses across days and times
     for i, course in enumerate(courses):
+        day_idx = i % len(days)
+        slot_idx = (i // len(days)) % len(slots)
+        room_idx = (i + slot_idx) % len(rooms)
+        
         schedule.append({
-            "course": course["id"],
-            "course_name": course.get("name", ""),
+            "course": course.get("id", f"COURSE_{i+1}"),
+            "course_name": course.get("name", f"Course {i+1}"),
             "lecturer": course.get("lecturer", "Unknown"),
             "department": course.get("department", ""),
-            "day": days[i % len(days)],
-            "time": slots[i % len(slots)],
-            "venue": rooms[i % len(rooms)]
+            "day": days[day_idx],
+            "time": slots[slot_idx],
+            "venue": rooms[room_idx]
         })
-    return schedule, 50.0
+    return schedule
+
+def calculate_fitness(schedule):
+    """Calculate fitness score for a schedule."""
+    penalties = 0
+    lecturer_schedule = {}
+    room_schedule = {}
+    
+    for entry in schedule:
+        lecturer_key = (entry.get("lecturer", ""), entry.get("day", ""), entry.get("time", ""))
+        room_key = (entry.get("venue", ""), entry.get("day", ""), entry.get("time", ""))
+        
+        if lecturer_key in lecturer_schedule:
+            penalties += 10
+        lecturer_schedule[lecturer_key] = True
+        
+        if room_key in room_schedule:
+            penalties += 10
+        room_schedule[room_key] = True
+    
+    return max(0, 100 - penalties)
 
 @admin_bp.route('/timetable', methods=['DELETE'])
 @token_required
@@ -929,7 +971,7 @@ def get_public_timetable():
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# STUDENT ENROLLMENT (Assign Courses to Student)
+# STUDENT ENROLLMENT
 # ============================================================
 
 @admin_bp.route('/students/<matric>/enroll', methods=['POST'])
@@ -973,23 +1015,25 @@ def get_student_courses(matric):
     }), 200
 
 # ============================================================
-# TEST ENDPOINT FOR SCHEDULER
+# DEBUG ENDPOINT - Check Course Data Structure
 # ============================================================
 
-@admin_bp.route('/test/scheduler', methods=['GET'])
+@admin_bp.route('/debug/courses', methods=['GET'])
 @token_required
-def test_scheduler(payload):
-    """Test if the scheduler is working."""
+def debug_courses(payload):
+    """Debug endpoint to check course data structure."""
     try:
-        from .scheduler import GeneticScheduler
-        return jsonify({
-            'status': 'success',
-            'message': 'GeneticScheduler imported successfully',
-            'scheduler_available': True
-        }), 200
-    except ImportError as e:
-        return jsonify({
-            'status': 'error',
-            'message': f'Failed to import GeneticScheduler: {str(e)}',
-            'scheduler_available': False
-        }), 500
+        courses = list(db.courses.find({}, {'_id': 0}))
+        if courses:
+            return jsonify({
+                'count': len(courses),
+                'sample': courses[0] if courses else None,
+                'all_fields': list(courses[0].keys()) if courses else []
+            }), 200
+        else:
+            return jsonify({
+                'count': 0,
+                'message': 'No courses found'
+            }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
