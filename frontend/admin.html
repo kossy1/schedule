@@ -287,6 +287,14 @@
             font-weight: 700;
         }
         
+        .top-bar .session-timer {
+            font-size: 0.7rem;
+            color: #6c757d;
+            background: #f8f9fa;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+        
         .sidebar-toggle {
             display: none;
             background: none;
@@ -819,6 +827,9 @@
                     <h4 id="sectionTitle">Dashboard</h4>
                 </div>
                 <div class="user-info">
+                    <span class="session-timer" id="sessionTimer">
+                        <i class="fas fa-clock me-1"></i> <span id="timerDisplay">--:--</span>
+                    </span>
                     <span class="text-muted" id="adminUsername">admin</span>
                     <div class="avatar">A</div>
                 </div>
@@ -1505,6 +1516,8 @@
         let token = localStorage.getItem('adminToken') || '';
         let toast = null;
         let csvData = [];
+        let sessionTimerInterval = null;
+        let sessionTimeLeft = 60 * 60; // 60 minutes in seconds
 
         // ========================================================
         // AUTO-ID GENERATORS (Only for auto-generated IDs)
@@ -1539,6 +1552,55 @@
         }
 
         // ========================================================
+        // SESSION TIMER
+        // ========================================================
+        function startSessionTimer() {
+            sessionTimeLeft = 60 * 60; // Reset to 60 minutes
+            updateTimerDisplay();
+            
+            if (sessionTimerInterval) {
+                clearInterval(sessionTimerInterval);
+            }
+            
+            sessionTimerInterval = setInterval(() => {
+                sessionTimeLeft--;
+                updateTimerDisplay();
+                
+                if (sessionTimeLeft <= 300) {
+                    // Less than 5 minutes left - show warning color
+                    document.getElementById('timerDisplay').style.color = '#dc3545';
+                }
+                
+                if (sessionTimeLeft <= 0) {
+                    // Session expired
+                    clearInterval(sessionTimerInterval);
+                    handleSessionExpired();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const minutes = Math.floor(sessionTimeLeft / 60);
+            const seconds = sessionTimeLeft % 60;
+            document.getElementById('timerDisplay').textContent = 
+                `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+        }
+
+        function resetSessionTimer() {
+            sessionTimeLeft = 60 * 60;
+            document.getElementById('timerDisplay').style.color = 'inherit';
+            updateTimerDisplay();
+        }
+
+        function handleSessionExpired() {
+            localStorage.removeItem('adminToken');
+            token = '';
+            document.getElementById('loginPage').style.display = 'flex';
+            document.getElementById('dashboardPage').style.display = 'none';
+            showToast('Session expired. Please login again.', 'warning');
+        }
+
+        // ========================================================
         // INITIALIZATION
         // ========================================================
         document.addEventListener('DOMContentLoaded', function() {
@@ -1549,6 +1611,7 @@
 
             if (token) {
                 verifyToken();
+                startSessionTimer();
             }
 
             // CSV Drag and Drop
@@ -1584,6 +1647,38 @@
                     }
                 }
             });
+
+            // Auto token refresh every 14 minutes
+            setInterval(async () => {
+                if (token) {
+                    try {
+                        const response = await fetch(`${ADMIN_API}/refresh`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': `Bearer ${token}`
+                            }
+                        });
+                        
+                        if (response.ok) {
+                            const data = await response.json();
+                            token = data.token;
+                            localStorage.setItem('adminToken', token);
+                            resetSessionTimer();
+                            console.log('🔄 Token auto-refreshed at', new Date().toLocaleTimeString());
+                        } else {
+                            // Token refresh failed
+                            localStorage.removeItem('adminToken');
+                            token = '';
+                            document.getElementById('loginPage').style.display = 'flex';
+                            document.getElementById('dashboardPage').style.display = 'none';
+                            showToast('Session expired. Please login again.', 'warning');
+                        }
+                    } catch (error) {
+                        console.error('Auto token refresh failed:', error);
+                    }
+                }
+            }, 14 * 60 * 1000); // 14 minutes
         });
 
         // ========================================================
@@ -1619,9 +1714,9 @@
         }
 
         // ========================================================
-        // API HELPER
+        // API HELPER with Token Expiration and Retry
         // ========================================================
-        async function apiCall(endpoint, options = {}) {
+        async function apiCall(endpoint, options = {}, retryCount = 0) {
             const url = endpoint.startsWith('http') ? endpoint : `${ADMIN_API}${endpoint}`;
             const headers = {
                 'Content-Type': 'application/json',
@@ -1635,6 +1730,48 @@
                     headers
                 });
 
+                // Check if token is expired (401)
+                if (response.status === 401) {
+                    // Try to refresh token once
+                    if (retryCount === 0 && token) {
+                        console.log('Token expired, attempting to refresh...');
+                        try {
+                            const refreshResponse = await fetch(`${ADMIN_API}/refresh`, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                }
+                            });
+                            
+                            if (refreshResponse.ok) {
+                                const refreshData = await refreshResponse.json();
+                                token = refreshData.token;
+                                localStorage.setItem('adminToken', token);
+                                resetSessionTimer();
+                                console.log('Token refreshed successfully, retrying request...');
+                                // Retry the original request with new token
+                                return await apiCall(endpoint, options, retryCount + 1);
+                            }
+                        } catch (refreshError) {
+                            console.error('Token refresh failed:', refreshError);
+                        }
+                    }
+                    
+                    // If refresh failed or already retried, redirect to login
+                    localStorage.removeItem('adminToken');
+                    token = '';
+                    if (sessionTimerInterval) {
+                        clearInterval(sessionTimerInterval);
+                    }
+                    showToast('Session expired. Please login again.', 'warning');
+                    setTimeout(() => {
+                        document.getElementById('loginPage').style.display = 'flex';
+                        document.getElementById('dashboardPage').style.display = 'none';
+                    }, 1500);
+                    throw new Error('Session expired. Please login again.');
+                }
+
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
                     const text = await response.text();
@@ -1645,6 +1782,11 @@
 
                 if (!response.ok) {
                     throw new Error(data.error || data.message || `HTTP ${response.status}`);
+                }
+
+                // Reset session timer on successful API call
+                if (response.status !== 401) {
+                    resetSessionTimer();
                 }
 
                 return data;
@@ -1667,10 +1809,18 @@
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
 
             try {
-                const data = await apiCall('/login', {
+                // Use direct fetch for login (no token required)
+                const response = await fetch(`${ADMIN_API}/login`, {
                     method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.error || 'Login failed');
+                }
 
                 token = data.token;
                 localStorage.setItem('adminToken', token);
@@ -1681,6 +1831,7 @@
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('dashboardPage').style.display = 'block';
 
+                startSessionTimer();
                 loadDashboard();
 
             } catch (error) {
@@ -1698,16 +1849,27 @@
                 document.getElementById('dashboardPage').style.display = 'block';
                 loadDashboard();
             } catch (error) {
+                // Token is invalid or expired
                 localStorage.removeItem('adminToken');
                 token = '';
+                if (sessionTimerInterval) {
+                    clearInterval(sessionTimerInterval);
+                }
                 document.getElementById('loginPage').style.display = 'flex';
                 document.getElementById('dashboardPage').style.display = 'none';
+                // Don't show error toast on auto-verify
+                if (!error.message.includes('Session expired')) {
+                    showToast('Session expired. Please login again.', 'warning');
+                }
             }
         }
 
         function handleLogout() {
             localStorage.removeItem('adminToken');
             token = '';
+            if (sessionTimerInterval) {
+                clearInterval(sessionTimerInterval);
+            }
             document.getElementById('loginPage').style.display = 'flex';
             document.getElementById('dashboardPage').style.display = 'none';
             showToast('👋 Logged out', 'info');
