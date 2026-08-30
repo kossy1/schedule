@@ -447,16 +447,16 @@ def student_login():
     except Exception as e:
         print(f"❌ Student login error: {e}")
         return jsonify({'error': str(e)}), 500
-
 # ============================================================
-# STUDENT TIMETABLE VIEW
+# STUDENT TIMETABLE VIEW WITH SEMESTER
 # ============================================================
 
 @admin_bp.route('/timetable/student/<matric>', methods=['GET'])
 def get_student_timetable(matric):
-    """Get timetable for a specific student by matric number."""
+    """Get timetable for a specific student by matric number with semester filter."""
     try:
         matric = matric.strip()
+        semester = request.args.get('semester', type=int, default=None)
         
         # Validate matric - numbers only
         if not matric.isdigit():
@@ -467,15 +467,32 @@ def get_student_timetable(matric):
         if not student:
             return jsonify({'error': 'Student not found'}), 404
         
-        # Get latest timetable
-        timetable = db.timetables.find_one(sort=[('_id', -1)], projection={'_id': 0})
+        # Get timetable - filter by semester if provided
+        query = {}
+        if semester:
+            query['semester'] = semester
+        
+        timetable = db.timetables.find_one(
+            query,
+            sort=[('_id', -1)], 
+            projection={'_id': 0}
+        )
         
         if not timetable:
-            return jsonify({'error': 'No timetable found'}), 404
+            return jsonify({'error': f'No timetable found for Semester {semester}'}), 404
+        
+        # Filter schedule by student's level if needed
+        student_level = student.get('level', 'ND1')
+        filtered_schedule = []
+        for item in timetable.get('schedule', []):
+            # In production, filter by student's enrolled courses
+            # For demo, show all or filter by level
+            if item.get('level') == student_level or not item.get('level'):
+                filtered_schedule.append(item)
         
         return jsonify({
             'student': student,
-            'schedule': timetable.get('schedule', []),
+            'schedule': filtered_schedule,
             'fitness_score': timetable.get('fitness_score', 0),
             'semester': timetable.get('semester', 1),
             'generated_at': timetable.get('generated_at')
