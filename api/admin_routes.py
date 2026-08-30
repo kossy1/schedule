@@ -21,29 +21,36 @@ VALID_LEVELS = ['ND1', 'ND2', 'HND1', 'HND2']
 @admin_bp.route('/login', methods=['POST'])
 def login():
     """Admin login endpoint."""
-    data = request.json
-    username = data.get('username')
-    password = data.get('password')
-    
-    if not username or not password:
-        return jsonify({'error': 'Username and password required'}), 400
-    
-    user = db.users.find_one({'username': username})
-    if not user:
-        return jsonify({'error': 'Invalid credentials'}), 401
-    
-    from .auth import verify_password, generate_token
-    if not verify_password(password, user['password']):
-        return jsonify({'error': 'Invalid credentials'}), 401
-    
-    token = generate_token(str(user['_id']), user['username'])
-    return jsonify({
-        'token': token,
-        'user': {
-            'username': user['username'],
-            'role': user.get('role', 'admin')
-        }
-    }), 200
+    try:
+        data = request.json
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+            
+        username = data.get('username')
+        password = data.get('password')
+        
+        if not username or not password:
+            return jsonify({'error': 'Username and password required'}), 400
+        
+        user = db.users.find_one({'username': username})
+        if not user:
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        from .auth import verify_password, generate_token
+        if not verify_password(password, user['password']):
+            return jsonify({'error': 'Invalid credentials'}), 401
+        
+        token = generate_token(str(user['_id']), user['username'])
+        return jsonify({
+            'token': token,
+            'user': {
+                'username': user['username'],
+                'role': user.get('role', 'admin')
+            }
+        }), 200
+    except Exception as e:
+        print(f"Login error: {e}")
+        return jsonify({'error': 'An error occurred during login'}), 500
 
 @admin_bp.route('/verify', methods=['GET'])
 @token_required
@@ -84,17 +91,21 @@ def refresh_token(payload):
 @token_required
 def get_stats(payload):
     """Get system statistics."""
-    stats = {
-        'departments': db.departments.count_documents({}),
-        'lecturers': db.lecturers.count_documents({}),
-        'students': db.students.count_documents({}),
-        'courses': db.courses.count_documents({}),
-        'halls': db.halls.count_documents({}),
-        'exams': db.exams.count_documents({}),
-        'timetables': db.timetables.count_documents({}),
-        'users': db.users.count_documents({})
-    }
-    return jsonify(stats), 200
+    try:
+        stats = {
+            'departments': db.departments.count_documents({}),
+            'lecturers': db.lecturers.count_documents({}),
+            'students': db.students.count_documents({}),
+            'courses': db.courses.count_documents({}),
+            'halls': db.halls.count_documents({}),
+            'exams': db.exams.count_documents({}),
+            'timetables': db.timetables.count_documents({}),
+            'users': db.users.count_documents({})
+        }
+        return jsonify(stats), 200
+    except Exception as e:
+        print(f"Stats error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # DEPARTMENTS CRUD
@@ -104,61 +115,77 @@ def get_stats(payload):
 @token_required
 def get_departments(payload):
     """Get all departments."""
-    departments = list(db.departments.find({}, {'_id': 0}))
-    return jsonify(departments), 200
+    try:
+        departments = list(db.departments.find({}, {'_id': 0}))
+        return jsonify(departments), 200
+    except Exception as e:
+        print(f"Get departments error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/departments', methods=['POST'])
 @token_required
 def add_department(payload):
     """Add a new department."""
-    data = request.json
-    required = ['id', 'name', 'code']
-    
-    if not all(k in data for k in required):
-        return jsonify({'error': f'Missing required fields: {required}'}), 400
-    
-    if db.departments.find_one({'id': data['id']}):
-        return jsonify({'error': f'Department {data["id"]} already exists'}), 400
-    
-    db.departments.insert_one({
-        'id': data['id'],
-        'name': data['name'],
-        'code': data['code'].upper(),
-        'head': data.get('head', ''),
-        'created_at': datetime.utcnow().isoformat()
-    })
-    return jsonify({'message': 'Department added successfully'}), 201
+    try:
+        data = request.json
+        required = ['id', 'name', 'code']
+        
+        if not all(k in data for k in required):
+            return jsonify({'error': f'Missing required fields: {required}'}), 400
+        
+        if db.departments.find_one({'id': data['id']}):
+            return jsonify({'error': f'Department {data["id"]} already exists'}), 400
+        
+        db.departments.insert_one({
+            'id': data['id'],
+            'name': data['name'],
+            'code': data['code'].upper(),
+            'head': data.get('head', ''),
+            'created_at': datetime.utcnow().isoformat()
+        })
+        return jsonify({'message': 'Department added successfully'}), 201
+    except Exception as e:
+        print(f"Add department error: {e}")
+        return jsonify({'error': str(e)}), 500
 
-@admin_bp.route('/departments/<dept_id>', methods(['PUT'])
+@admin_bp.route('/departments/<dept_id>', methods=['PUT'])
 @token_required
 def update_department(payload, dept_id):
     """Update a department."""
-    data = request.json
-    result = db.departments.update_one(
-        {'id': dept_id}, 
-        {'$set': {
-            'name': data.get('name'),
-            'code': data.get('code', '').upper(),
-            'head': data.get('head', ''),
-            'updated_at': datetime.utcnow().isoformat()
-        }}
-    )
-    
-    if result.matched_count == 0:
-        return jsonify({'error': 'Department not found'}), 404
-    
-    return jsonify({'message': 'Department updated successfully'}), 200
+    try:
+        data = request.json
+        result = db.departments.update_one(
+            {'id': dept_id}, 
+            {'$set': {
+                'name': data.get('name'),
+                'code': data.get('code', '').upper(),
+                'head': data.get('head', ''),
+                'updated_at': datetime.utcnow().isoformat()
+            }}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({'error': 'Department not found'}), 404
+        
+        return jsonify({'message': 'Department updated successfully'}), 200
+    except Exception as e:
+        print(f"Update department error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/departments/<dept_id>', methods=['DELETE'])
 @token_required
 def delete_department(payload, dept_id):
     """Delete a department."""
-    result = db.departments.delete_one({'id': dept_id})
-    
-    if result.deleted_count == 0:
-        return jsonify({'error': 'Department not found'}), 404
-    
-    return jsonify({'message': 'Department deleted successfully'}), 200
+    try:
+        result = db.departments.delete_one({'id': dept_id})
+        
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Department not found'}), 404
+        
+        return jsonify({'message': 'Department deleted successfully'}), 200
+    except Exception as e:
+        print(f"Delete department error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # LECTURERS CRUD
@@ -168,65 +195,81 @@ def delete_department(payload, dept_id):
 @token_required
 def get_lecturers(payload):
     """Get all lecturers."""
-    lecturers = list(db.lecturers.find({}, {'_id': 0}))
-    return jsonify(lecturers), 200
+    try:
+        lecturers = list(db.lecturers.find({}, {'_id': 0}))
+        return jsonify(lecturers), 200
+    except Exception as e:
+        print(f"Get lecturers error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/lecturers', methods=['POST'])
 @token_required
 def add_lecturer(payload):
     """Add a new lecturer."""
-    data = request.json
-    required = ['id', 'name', 'surname', 'department', 'email']
-    
-    if not all(k in data for k in required):
-        return jsonify({'error': f'Missing required fields: {required}'}), 400
-    
-    if db.lecturers.find_one({'id': data['id']}):
-        return jsonify({'error': f'Lecturer {data["id"]} already exists'}), 400
-    
-    db.lecturers.insert_one({
-        'id': data['id'],
-        'name': data['name'],
-        'surname': data['surname'],
-        'department': data['department'],
-        'email': data['email'],
-        'phone': data.get('phone', ''),
-        'created_at': datetime.utcnow().isoformat()
-    })
-    return jsonify({'message': 'Lecturer added successfully'}), 201
+    try:
+        data = request.json
+        required = ['id', 'name', 'surname', 'department', 'email']
+        
+        if not all(k in data for k in required):
+            return jsonify({'error': f'Missing required fields: {required}'}), 400
+        
+        if db.lecturers.find_one({'id': data['id']}):
+            return jsonify({'error': f'Lecturer {data["id"]} already exists'}), 400
+        
+        db.lecturers.insert_one({
+            'id': data['id'],
+            'name': data['name'],
+            'surname': data['surname'],
+            'department': data['department'],
+            'email': data['email'],
+            'phone': data.get('phone', ''),
+            'created_at': datetime.utcnow().isoformat()
+        })
+        return jsonify({'message': 'Lecturer added successfully'}), 201
+    except Exception as e:
+        print(f"Add lecturer error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/lecturers/<lecturer_id>', methods=['PUT'])
 @token_required
 def update_lecturer(payload, lecturer_id):
     """Update a lecturer."""
-    data = request.json
-    result = db.lecturers.update_one(
-        {'id': lecturer_id},
-        {'$set': {
-            'name': data.get('name'),
-            'surname': data.get('surname'),
-            'department': data.get('department'),
-            'email': data.get('email'),
-            'phone': data.get('phone', ''),
-            'updated_at': datetime.utcnow().isoformat()
-        }}
-    )
-    
-    if result.matched_count == 0:
-        return jsonify({'error': 'Lecturer not found'}), 404
-    
-    return jsonify({'message': 'Lecturer updated successfully'}), 200
+    try:
+        data = request.json
+        result = db.lecturers.update_one(
+            {'id': lecturer_id},
+            {'$set': {
+                'name': data.get('name'),
+                'surname': data.get('surname'),
+                'department': data.get('department'),
+                'email': data.get('email'),
+                'phone': data.get('phone', ''),
+                'updated_at': datetime.utcnow().isoformat()
+            }}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({'error': 'Lecturer not found'}), 404
+        
+        return jsonify({'message': 'Lecturer updated successfully'}), 200
+    except Exception as e:
+        print(f"Update lecturer error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/lecturers/<lecturer_id>', methods=['DELETE'])
 @token_required
 def delete_lecturer(payload, lecturer_id):
     """Delete a lecturer."""
-    result = db.lecturers.delete_one({'id': lecturer_id})
-    
-    if result.deleted_count == 0:
-        return jsonify({'error': 'Lecturer not found'}), 404
-    
-    return jsonify({'message': 'Lecturer deleted successfully'}), 200
+    try:
+        result = db.lecturers.delete_one({'id': lecturer_id})
+        
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Lecturer not found'}), 404
+        
+        return jsonify({'message': 'Lecturer deleted successfully'}), 200
+    except Exception as e:
+        print(f"Delete lecturer error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # STUDENTS CRUD
@@ -236,98 +279,114 @@ def delete_lecturer(payload, lecturer_id):
 @token_required
 def get_students(payload):
     """Get all students."""
-    students = list(db.students.find({}, {'_id': 0}))
-    return jsonify(students), 200
+    try:
+        students = list(db.students.find({}, {'_id': 0}))
+        return jsonify(students), 200
+    except Exception as e:
+        print(f"Get students error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/students', methods=['POST'])
 @token_required
 def add_student(payload):
     """Add a new student with matric number (numbers only) and polytechnic level."""
-    data = request.json
-    required = ['matric', 'name', 'surname', 'department', 'level']
-    
-    if not all(k in data for k in required):
-        return jsonify({'error': f'Missing required fields: {required}'}), 400
-    
-    # Validate matric number - numbers only
-    matric = data['matric'].strip()
-    if not matric.isdigit():
-        return jsonify({'error': 'Matric number must contain only numbers (no letters or special characters)'}), 400
-    
-    # Validate level - must be ND1, ND2, HND1, or HND2
-    if data['level'] not in VALID_LEVELS:
-        return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
-    
-    # Check if student exists
-    if db.students.find_one({'matric': matric}):
-        return jsonify({'error': f'Student with matric {matric} already exists'}), 400
-    
-    db.students.insert_one({
-        'matric': matric,
-        'name': data['name'],
-        'surname': data['surname'],
-        'department': data['department'],
-        'level': data['level'],
-        'email': data.get('email', ''),
-        'phone': data.get('phone', ''),
-        'created_at': datetime.utcnow().isoformat()
-    })
-    return jsonify({'message': 'Student added successfully'}), 201
+    try:
+        data = request.json
+        required = ['matric', 'name', 'surname', 'department', 'level']
+        
+        if not all(k in data for k in required):
+            return jsonify({'error': f'Missing required fields: {required}'}), 400
+        
+        # Validate matric number - numbers only
+        matric = data['matric'].strip()
+        if not matric.isdigit():
+            return jsonify({'error': 'Matric number must contain only numbers (no letters or special characters)'}), 400
+        
+        # Validate level - must be ND1, ND2, HND1, or HND2
+        if data['level'] not in VALID_LEVELS:
+            return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
+        
+        # Check if student exists
+        if db.students.find_one({'matric': matric}):
+            return jsonify({'error': f'Student with matric {matric} already exists'}), 400
+        
+        db.students.insert_one({
+            'matric': matric,
+            'name': data['name'],
+            'surname': data['surname'],
+            'department': data['department'],
+            'level': data['level'],
+            'email': data.get('email', ''),
+            'phone': data.get('phone', ''),
+            'created_at': datetime.utcnow().isoformat()
+        })
+        return jsonify({'message': 'Student added successfully'}), 201
+    except Exception as e:
+        print(f"Add student error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/students/<matric>', methods=['PUT'])
 @token_required
 def update_student(payload, matric):
     """Update a student by matric number."""
-    data = request.json
-    matric = matric.strip()
-    
-    # Validate matric format if provided
-    if 'matric' in data:
-        new_matric = data['matric'].strip()
-        if not new_matric.isdigit():
-            return jsonify({'error': 'Matric number must contain only numbers'}), 400
-        # Check if new matric already exists
-        if new_matric != matric and db.students.find_one({'matric': new_matric}):
-            return jsonify({'error': f'Student with matric {new_matric} already exists'}), 400
-    
-    # Validate level if provided
-    if 'level' in data and data['level'] not in VALID_LEVELS:
-        return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
-    
-    update_data = {
-        'name': data.get('name'),
-        'surname': data.get('surname'),
-        'department': data.get('department'),
-        'level': data.get('level'),
-        'email': data.get('email', ''),
-        'phone': data.get('phone', ''),
-        'updated_at': datetime.utcnow().isoformat()
-    }
-    
-    # If matric is being updated
-    if 'matric' in data and data['matric'].strip() != matric:
-        update_data['matric'] = data['matric'].strip()
-    
-    result = db.students.update_one(
-        {'matric': matric},
-        {'$set': update_data}
-    )
-    
-    if result.matched_count == 0:
-        return jsonify({'error': 'Student not found'}), 404
-    
-    return jsonify({'message': 'Student updated successfully'}), 200
+    try:
+        data = request.json
+        matric = matric.strip()
+        
+        # Validate matric format if provided
+        if 'matric' in data:
+            new_matric = data['matric'].strip()
+            if not new_matric.isdigit():
+                return jsonify({'error': 'Matric number must contain only numbers'}), 400
+            # Check if new matric already exists
+            if new_matric != matric and db.students.find_one({'matric': new_matric}):
+                return jsonify({'error': f'Student with matric {new_matric} already exists'}), 400
+        
+        # Validate level if provided
+        if 'level' in data and data['level'] not in VALID_LEVELS:
+            return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
+        
+        update_data = {
+            'name': data.get('name'),
+            'surname': data.get('surname'),
+            'department': data.get('department'),
+            'level': data.get('level'),
+            'email': data.get('email', ''),
+            'phone': data.get('phone', ''),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        # If matric is being updated
+        if 'matric' in data and data['matric'].strip() != matric:
+            update_data['matric'] = data['matric'].strip()
+        
+        result = db.students.update_one(
+            {'matric': matric},
+            {'$set': update_data}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({'error': 'Student not found'}), 404
+        
+        return jsonify({'message': 'Student updated successfully'}), 200
+    except Exception as e:
+        print(f"Update student error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/students/<matric>', methods=['DELETE'])
 @token_required
 def delete_student(payload, matric):
     """Delete a student by matric number."""
-    result = db.students.delete_one({'matric': matric.strip()})
-    
-    if result.deleted_count == 0:
-        return jsonify({'error': 'Student not found'}), 404
-    
-    return jsonify({'message': 'Student deleted successfully'}), 200
+    try:
+        result = db.students.delete_one({'matric': matric.strip()})
+        
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Student not found'}), 404
+        
+        return jsonify({'message': 'Student deleted successfully'}), 200
+    except Exception as e:
+        print(f"Delete student error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # STUDENT LOGIN
@@ -503,85 +562,101 @@ def get_lecturer_timetable(staff_id):
 @token_required
 def get_courses(payload):
     """Get all courses."""
-    courses = list(db.courses.find({}, {'_id': 0}))
-    return jsonify(courses), 200
+    try:
+        courses = list(db.courses.find({}, {'_id': 0}))
+        return jsonify(courses), 200
+    except Exception as e:
+        print(f"Get courses error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/courses', methods=['POST'])
 @token_required
 def add_course(payload):
     """Add a new course with manual code entry."""
-    data = request.json
-    required = ['code', 'name', 'department', 'level', 'lecturer', 'credits', 'semester']
-    
-    if not all(k in data for k in required):
-        return jsonify({'error': f'Missing required fields: {required}'}), 400
-    
-    # Validate level
-    if data['level'] not in VALID_LEVELS:
-        return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
-    
-    # Check if course exists
-    if db.courses.find_one({'code': data['code']}):
-        return jsonify({'error': f'Course {data["code"]} already exists'}), 400
-    
-    db.courses.insert_one({
-        'code': data['code'],
-        'name': data['name'],
-        'department': data['department'],
-        'level': data['level'],
-        'lecturer': data['lecturer'],
-        'credits': data['credits'],
-        'semester': data['semester'],
-        'created_at': datetime.utcnow().isoformat()
-    })
-    return jsonify({'message': 'Course added successfully'}), 201
+    try:
+        data = request.json
+        required = ['code', 'name', 'department', 'level', 'lecturer', 'credits', 'semester']
+        
+        if not all(k in data for k in required):
+            return jsonify({'error': f'Missing required fields: {required}'}), 400
+        
+        # Validate level
+        if data['level'] not in VALID_LEVELS:
+            return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
+        
+        # Check if course exists
+        if db.courses.find_one({'code': data['code']}):
+            return jsonify({'error': f'Course {data["code"]} already exists'}), 400
+        
+        db.courses.insert_one({
+            'code': data['code'],
+            'name': data['name'],
+            'department': data['department'],
+            'level': data['level'],
+            'lecturer': data['lecturer'],
+            'credits': data['credits'],
+            'semester': data['semester'],
+            'created_at': datetime.utcnow().isoformat()
+        })
+        return jsonify({'message': 'Course added successfully'}), 201
+    except Exception as e:
+        print(f"Add course error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/courses/<course_code>', methods=['PUT'])
 @token_required
 def update_course(payload, course_code):
     """Update a course - allows changing the course code."""
-    data = request.json
-    
-    # Validate level if provided
-    if 'level' in data and data['level'] not in VALID_LEVELS:
-        return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
-    
-    # If course code is being changed, check if the new code already exists
-    if 'code' in data and data['code'] != course_code:
-        if db.courses.find_one({'code': data['code']}):
-            return jsonify({'error': f'Course {data["code"]} already exists'}), 400
-    
-    update_data = {
-        'code': data.get('code', course_code),
-        'name': data.get('name'),
-        'department': data.get('department'),
-        'level': data.get('level'),
-        'lecturer': data.get('lecturer'),
-        'credits': data.get('credits'),
-        'semester': data.get('semester'),
-        'updated_at': datetime.utcnow().isoformat()
-    }
-    
-    result = db.courses.update_one(
-        {'code': course_code},
-        {'$set': update_data}
-    )
-    
-    if result.matched_count == 0:
-        return jsonify({'error': 'Course not found'}), 404
-    
-    return jsonify({'message': 'Course updated successfully'}), 200
+    try:
+        data = request.json
+        
+        # Validate level if provided
+        if 'level' in data and data['level'] not in VALID_LEVELS:
+            return jsonify({'error': f'Invalid level. Must be one of: {", ".join(VALID_LEVELS)}'}), 400
+        
+        # If course code is being changed, check if the new code already exists
+        if 'code' in data and data['code'] != course_code:
+            if db.courses.find_one({'code': data['code']}):
+                return jsonify({'error': f'Course {data["code"]} already exists'}), 400
+        
+        update_data = {
+            'code': data.get('code', course_code),
+            'name': data.get('name'),
+            'department': data.get('department'),
+            'level': data.get('level'),
+            'lecturer': data.get('lecturer'),
+            'credits': data.get('credits'),
+            'semester': data.get('semester'),
+            'updated_at': datetime.utcnow().isoformat()
+        }
+        
+        result = db.courses.update_one(
+            {'code': course_code},
+            {'$set': update_data}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({'error': 'Course not found'}), 404
+        
+        return jsonify({'message': 'Course updated successfully'}), 200
+    except Exception as e:
+        print(f"Update course error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/courses/<course_code>', methods=['DELETE'])
 @token_required
 def delete_course(payload, course_code):
     """Delete a course."""
-    result = db.courses.delete_one({'code': course_code})
-    
-    if result.deleted_count == 0:
-        return jsonify({'error': 'Course not found'}), 404
-    
-    return jsonify({'message': 'Course deleted successfully'}), 200
+    try:
+        result = db.courses.delete_one({'code': course_code})
+        
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Course not found'}), 404
+        
+        return jsonify({'message': 'Course deleted successfully'}), 200
+    except Exception as e:
+        print(f"Delete course error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # HALLS CRUD
@@ -591,63 +666,79 @@ def delete_course(payload, course_code):
 @token_required
 def get_halls(payload):
     """Get all halls."""
-    halls = list(db.halls.find({}, {'_id': 0}))
-    return jsonify(halls), 200
+    try:
+        halls = list(db.halls.find({}, {'_id': 0}))
+        return jsonify(halls), 200
+    except Exception as e:
+        print(f"Get halls error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/halls', methods=['POST'])
 @token_required
 def add_hall(payload):
     """Add a new hall."""
-    data = request.json
-    required = ['id', 'name', 'capacity', 'type']
-    
-    if not all(k in data for k in required):
-        return jsonify({'error': f'Missing required fields: {required}'}), 400
-    
-    if db.halls.find_one({'id': data['id']}):
-        return jsonify({'error': f'Hall {data["id"]} already exists'}), 400
-    
-    db.halls.insert_one({
-        'id': data['id'],
-        'name': data['name'],
-        'capacity': data['capacity'],
-        'type': data['type'],
-        'location': data.get('location', ''),
-        'created_at': datetime.utcnow().isoformat()
-    })
-    return jsonify({'message': 'Hall added successfully'}), 201
+    try:
+        data = request.json
+        required = ['id', 'name', 'capacity', 'type']
+        
+        if not all(k in data for k in required):
+            return jsonify({'error': f'Missing required fields: {required}'}), 400
+        
+        if db.halls.find_one({'id': data['id']}):
+            return jsonify({'error': f'Hall {data["id"]} already exists'}), 400
+        
+        db.halls.insert_one({
+            'id': data['id'],
+            'name': data['name'],
+            'capacity': data['capacity'],
+            'type': data['type'],
+            'location': data.get('location', ''),
+            'created_at': datetime.utcnow().isoformat()
+        })
+        return jsonify({'message': 'Hall added successfully'}), 201
+    except Exception as e:
+        print(f"Add hall error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/halls/<hall_id>', methods=['PUT'])
 @token_required
 def update_hall(payload, hall_id):
     """Update a hall."""
-    data = request.json
-    result = db.halls.update_one(
-        {'id': hall_id},
-        {'$set': {
-            'name': data.get('name'),
-            'capacity': data.get('capacity'),
-            'type': data.get('type'),
-            'location': data.get('location', ''),
-            'updated_at': datetime.utcnow().isoformat()
-        }}
-    )
-    
-    if result.matched_count == 0:
-        return jsonify({'error': 'Hall not found'}), 404
-    
-    return jsonify({'message': 'Hall updated successfully'}), 200
+    try:
+        data = request.json
+        result = db.halls.update_one(
+            {'id': hall_id},
+            {'$set': {
+                'name': data.get('name'),
+                'capacity': data.get('capacity'),
+                'type': data.get('type'),
+                'location': data.get('location', ''),
+                'updated_at': datetime.utcnow().isoformat()
+            }}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({'error': 'Hall not found'}), 404
+        
+        return jsonify({'message': 'Hall updated successfully'}), 200
+    except Exception as e:
+        print(f"Update hall error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/halls/<hall_id>', methods=['DELETE'])
 @token_required
 def delete_hall(payload, hall_id):
     """Delete a hall."""
-    result = db.halls.delete_one({'id': hall_id})
-    
-    if result.deleted_count == 0:
-        return jsonify({'error': 'Hall not found'}), 404
-    
-    return jsonify({'message': 'Hall deleted successfully'}), 200
+    try:
+        result = db.halls.delete_one({'id': hall_id})
+        
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Hall not found'}), 404
+        
+        return jsonify({'message': 'Hall deleted successfully'}), 200
+    except Exception as e:
+        print(f"Delete hall error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # EXAMS CRUD
@@ -657,71 +748,87 @@ def delete_hall(payload, hall_id):
 @token_required
 def get_exams(payload):
     """Get all exams."""
-    exams = list(db.exams.find({}, {'_id': 0}))
-    return jsonify(exams), 200
+    try:
+        exams = list(db.exams.find({}, {'_id': 0}))
+        return jsonify(exams), 200
+    except Exception as e:
+        print(f"Get exams error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/exams', methods=['POST'])
 @token_required
 def add_exam(payload):
     """Add a new exam."""
-    data = request.json
-    required = ['id', 'course', 'date', 'time', 'hall']
-    
-    if not all(k in data for k in required):
-        return jsonify({'error': f'Missing required fields: {required}'}), 400
-    
-    # Check for conflicts
-    existing = db.exams.find_one({
-        'date': data['date'],
-        'time': data['time'],
-        'hall': data['hall']
-    })
-    if existing:
-        return jsonify({'error': 'Hall already booked for this time slot'}), 400
-    
-    db.exams.insert_one({
-        'id': data['id'],
-        'course': data['course'],
-        'date': data['date'],
-        'time': data['time'],
-        'hall': data['hall'],
-        'duration': data.get('duration', '2 hours'),
-        'created_at': datetime.utcnow().isoformat()
-    })
-    return jsonify({'message': 'Exam added successfully'}), 201
+    try:
+        data = request.json
+        required = ['id', 'course', 'date', 'time', 'hall']
+        
+        if not all(k in data for k in required):
+            return jsonify({'error': f'Missing required fields: {required}'}), 400
+        
+        # Check for conflicts
+        existing = db.exams.find_one({
+            'date': data['date'],
+            'time': data['time'],
+            'hall': data['hall']
+        })
+        if existing:
+            return jsonify({'error': 'Hall already booked for this time slot'}), 400
+        
+        db.exams.insert_one({
+            'id': data['id'],
+            'course': data['course'],
+            'date': data['date'],
+            'time': data['time'],
+            'hall': data['hall'],
+            'duration': data.get('duration', '2 hours'),
+            'created_at': datetime.utcnow().isoformat()
+        })
+        return jsonify({'message': 'Exam added successfully'}), 201
+    except Exception as e:
+        print(f"Add exam error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/exams/<exam_id>', methods=['PUT'])
 @token_required
 def update_exam(payload, exam_id):
     """Update an exam."""
-    data = request.json
-    result = db.exams.update_one(
-        {'id': exam_id},
-        {'$set': {
-            'course': data.get('course'),
-            'date': data.get('date'),
-            'time': data.get('time'),
-            'hall': data.get('hall'),
-            'duration': data.get('duration', '2 hours'),
-            'updated_at': datetime.utcnow().isoformat()
-        }}
-    )
-    
-    if result.matched_count == 0:
-        return jsonify({'error': 'Exam not found'}), 404
-    
-    return jsonify({'message': 'Exam updated successfully'}), 200
+    try:
+        data = request.json
+        result = db.exams.update_one(
+            {'id': exam_id},
+            {'$set': {
+                'course': data.get('course'),
+                'date': data.get('date'),
+                'time': data.get('time'),
+                'hall': data.get('hall'),
+                'duration': data.get('duration', '2 hours'),
+                'updated_at': datetime.utcnow().isoformat()
+            }}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({'error': 'Exam not found'}), 404
+        
+        return jsonify({'message': 'Exam updated successfully'}), 200
+    except Exception as e:
+        print(f"Update exam error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/exams/<exam_id>', methods=['DELETE'])
 @token_required
 def delete_exam(payload, exam_id):
     """Delete an exam."""
-    result = db.exams.delete_one({'id': exam_id})
-    
-    if result.deleted_count == 0:
-        return jsonify({'error': 'Exam not found'}), 404
-    
-    return jsonify({'message': 'Exam deleted successfully'}), 200
+    try:
+        result = db.exams.delete_one({'id': exam_id})
+        
+        if result.deleted_count == 0:
+            return jsonify({'error': 'Exam not found'}), 404
+        
+        return jsonify({'message': 'Exam deleted successfully'}), 200
+    except Exception as e:
+        print(f"Delete exam error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/exams/generate', methods=['POST'])
 @token_required
@@ -771,7 +878,7 @@ def generate_exam_schedule(payload):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# CLASS TIMETABLE - WITH SEMESTER
+# CLASS TIMETABLE
 # ============================================================
 
 @admin_bp.route('/timetable/latest', methods=['GET'])
@@ -809,7 +916,7 @@ def get_timetable_by_semester(payload, semester):
         
         return jsonify(timetable), 200
     except Exception as e:
-        print(f"Error getting timetable: {e}")
+        print(f"Error getting timetable by semester: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/timetable/generate', methods=['POST'])
@@ -854,15 +961,7 @@ def generate_timetable(payload):
         for idx, c in enumerate(courses):
             try:
                 # Safe way to get course ID
-                course_id = None
-                if 'code' in c and c['code']:
-                    course_id = c['code']
-                elif 'id' in c and c['id']:
-                    course_id = c['id']
-                elif '_id' in c:
-                    course_id = str(c['_id'])
-                else:
-                    course_id = f"COURSE_{idx+1}"
+                course_id = c.get('code') or c.get('id') or f"COURSE_{idx+1}"
                 
                 # Get course name
                 course_name = c.get('name', f'Course {course_id}')
@@ -1011,6 +1110,7 @@ def get_public_timetable():
             'generated_at': timetable.get('generated_at')
         }), 200
     except Exception as e:
+        print(f"Public timetable error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -1021,41 +1121,49 @@ def get_public_timetable():
 @token_required
 def enroll_student(payload, matric):
     """Enroll a student in courses."""
-    data = request.json
-    courses = data.get('courses', [])
-    
-    if not courses:
-        return jsonify({'error': 'No courses provided'}), 400
-    
-    result = db.students.update_one(
-        {'matric': matric.strip()},
-        {'$set': {
-            'courses': courses,
-            'updated_at': datetime.utcnow().isoformat()
-        }}
-    )
-    
-    if result.matched_count == 0:
-        return jsonify({'error': 'Student not found'}), 404
-    
-    return jsonify({
-        'message': f'Student enrolled in {len(courses)} courses',
-        'courses': courses
-    }), 200
+    try:
+        data = request.json
+        courses = data.get('courses', [])
+        
+        if not courses:
+            return jsonify({'error': 'No courses provided'}), 400
+        
+        result = db.students.update_one(
+            {'matric': matric.strip()},
+            {'$set': {
+                'courses': courses,
+                'updated_at': datetime.utcnow().isoformat()
+            }}
+        )
+        
+        if result.matched_count == 0:
+            return jsonify({'error': 'Student not found'}), 404
+        
+        return jsonify({
+            'message': f'Student enrolled in {len(courses)} courses',
+            'courses': courses
+        }), 200
+    except Exception as e:
+        print(f"Enroll student error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/students/<matric>/courses', methods=['GET'])
 def get_student_courses(matric):
     """Get courses enrolled by a student."""
-    student = db.students.find_one({'matric': matric.strip()}, {'_id': 0})
-    
-    if not student:
-        return jsonify({'error': 'Student not found'}), 404
-    
-    return jsonify({
-        'matric': student['matric'],
-        'name': student['name'],
-        'courses': student.get('courses', [])
-    }), 200
+    try:
+        student = db.students.find_one({'matric': matric.strip()}, {'_id': 0})
+        
+        if not student:
+            return jsonify({'error': 'Student not found'}), 404
+        
+        return jsonify({
+            'matric': student['matric'],
+            'name': student['name'],
+            'courses': student.get('courses', [])
+        }), 200
+    except Exception as e:
+        print(f"Get student courses error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # DEBUG ENDPOINT
@@ -1079,4 +1187,5 @@ def debug_courses(payload):
                 'message': 'No courses found'
             }), 200
     except Exception as e:
+        print(f"Debug courses error: {e}")
         return jsonify({'error': str(e)}), 500
