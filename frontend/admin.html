@@ -1550,6 +1550,7 @@
             if (hostname === 'localhost' || hostname === '127.0.0.1') {
                 return 'http://localhost:5000/api';
             }
+            // For Vercel, use relative path
             return '/api';
         })();
 
@@ -1559,6 +1560,9 @@
         let csvData = [];
         let sessionTimerInterval = null;
         let sessionTimeLeft = 60 * 60;
+
+        console.log('🌐 API URL:', API_URL);
+        console.log('🔑 Token exists:', !!token);
 
         // ========================================================
         // AUTO-ID GENERATORS
@@ -1587,6 +1591,7 @@
                 const data = await apiCall('/stats');
                 return data[collection] || 0;
             } catch (error) {
+                console.warn(`Could not get count for ${collection}:`, error);
                 return 0;
             }
         }
@@ -1636,11 +1641,23 @@
         // INITIALIZATION
         // ========================================================
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Admin dashboard loaded');
+            
             const toastEl = document.getElementById('toastMessage');
             if (toastEl) toast = new bootstrap.Toast(toastEl, { delay: 3000 });
-            if (token) { verifyToken();
-                startSessionTimer(); }
+            
+            // Check if token exists and verify
+            if (token) {
+                console.log('🔍 Token found, verifying...');
+                verifyToken();
+                startSessionTimer();
+            } else {
+                console.log('🔍 No token found, showing login page');
+                document.getElementById('loginPage').style.display = 'flex';
+                document.getElementById('dashboardPage').style.display = 'none';
+            }
 
+            // CSV Drag and Drop
             const dropArea = document.getElementById('csvDropArea');
             if (dropArea) {
                 dropArea.addEventListener('dragover', function(e) { e.preventDefault();
@@ -1667,35 +1684,6 @@
                     }
                 }
             });
-
-            // Auto token refresh every 14 minutes
-            setInterval(async () => {
-                if (token) {
-                    try {
-                        const response = await fetch(`${ADMIN_API}/refresh`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
-                        });
-                        if (response.ok) {
-                            const data = await response.json();
-                            if (data.token) {
-                                token = data.token;
-                                localStorage.setItem('adminToken', token);
-                                resetSessionTimer();
-                            }
-                        } else {
-                            localStorage.removeItem('adminToken');
-                            token = '';
-                            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
-                            document.getElementById('loginPage').style.display = 'flex';
-                            document.getElementById('dashboardPage').style.display = 'none';
-                            showToast('Session expired. Please login again.', 'warning');
-                        }
-                    } catch (error) {
-                        console.error('Auto token refresh failed:', error);
-                    }
-                }
-            }, 14 * 60 * 1000);
         });
 
         // ========================================================
@@ -1721,7 +1709,7 @@
         }
 
         // ========================================================
-        // API HELPER
+        // API HELPER WITH BETTER ERROR HANDLING
         // ========================================================
         async function apiCall(endpoint, options = {}, retryCount = 0) {
             const url = endpoint.startsWith('http') ? endpoint : `${ADMIN_API}${endpoint}`;
@@ -1730,8 +1718,28 @@
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 ...(options.headers || {})
             };
+            
             try {
+                console.log(`📡 API Call: ${url}`, { method: options.method || 'GET' });
+                
                 const response = await fetch(url, { ...options, headers });
+                
+                console.log(`📡 Response Status: ${response.status}`);
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('❌ Non-JSON response:', text.substring(0, 300));
+                    
+                    if (text.includes('<!DOCTYPE html>') || text.includes('<html>')) {
+                        throw new Error(`Server returned HTML instead of JSON. The API endpoint may not exist. Status: ${response.status}`);
+                    }
+                    throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
+                }
+                
+                const data = await response.json();
+                
                 if (response.status === 401) {
                     if (retryCount === 0 && token) {
                         try {
@@ -1745,10 +1753,13 @@
                                     token = refreshData.token;
                                     localStorage.setItem('adminToken', token);
                                     resetSessionTimer();
+                                    console.log('✅ Token refreshed, retrying...');
                                     return await apiCall(endpoint, options, retryCount + 1);
                                 }
                             }
-                        } catch (refreshError) { console.error('Token refresh failed:', refreshError); }
+                        } catch (refreshError) {
+                            console.error('Token refresh failed:', refreshError);
+                        }
                     }
                     localStorage.removeItem('adminToken');
                     token = '';
@@ -1760,19 +1771,16 @@
                     }, 1500);
                     throw new Error('Session expired. Please login again.');
                 }
-                const contentType = response.headers.get('content-type');
-                if (!contentType || !contentType.includes('application/json')) {
-                    const text = await response.text();
-                    throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
-                }
-                const data = await response.json();
+                
                 if (!response.ok) {
+                    console.error('❌ API Error Response:', data);
                     throw new Error(data.error || data.message || `HTTP ${response.status}`);
                 }
+                
                 if (response.status !== 401) resetSessionTimer();
                 return data;
             } catch (error) {
-                console.error('API Call Error:', error);
+                console.error('❌ API Call Error:', error);
                 throw error;
             }
         }
@@ -1785,26 +1793,54 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const btn = document.getElementById('loginBtn');
+            
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
+            
             try {
+                console.log('🔑 Attempting login...');
+                
                 const response = await fetch(`${ADMIN_API}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
+                
+                console.log(`📡 Login Response Status: ${response.status}`);
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                if (!contentType || !contentType.includes('application/json')) {
+                    const text = await response.text();
+                    console.error('❌ Non-JSON login response:', text.substring(0, 200));
+                    throw new Error('Server returned HTML instead of JSON. Please check your deployment.');
+                }
+                
                 const data = await response.json();
-                if (!response.ok) throw new Error(data.error || 'Login failed');
-                if (!data.token) throw new Error('No token received');
+                
+                if (!response.ok) {
+                    throw new Error(data.error || 'Login failed');
+                }
+                
+                if (!data.token) {
+                    throw new Error('No token received from server');
+                }
+                
                 token = data.token;
                 localStorage.setItem('adminToken', token);
+                console.log('✅ Token stored in localStorage');
+                
                 document.getElementById('adminUsername').textContent = data.user?.username || 'admin';
                 showToast('✅ Login successful!', 'success');
+                
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('dashboardPage').style.display = 'block';
+                
                 startSessionTimer();
                 await loadDashboard();
+                
             } catch (error) {
+                console.error('❌ Login Error:', error);
                 showToast('❌ ' + error.message, 'danger');
             } finally {
                 btn.disabled = false;
@@ -1814,11 +1850,14 @@
 
         async function verifyToken() {
             try {
+                console.log('🔍 Verifying token...');
                 await apiCall('/verify');
+                console.log('✅ Token verified successfully');
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('dashboardPage').style.display = 'block';
                 await loadDashboard();
             } catch (error) {
+                console.warn('⚠️ Token verification failed:', error.message);
                 localStorage.removeItem('adminToken');
                 token = '';
                 if (sessionTimerInterval) clearInterval(sessionTimerInterval);
@@ -1896,19 +1935,24 @@
         // ========================================================
         async function loadDashboard() {
             try {
+                console.log('📊 Loading dashboard stats...');
                 const stats = await apiCall('/stats');
+                console.log('📊 Stats received:', stats);
+                
                 document.getElementById('statDepartments').textContent = stats.departments || 0;
                 document.getElementById('statLecturers').textContent = stats.lecturers || 0;
                 document.getElementById('statStudents').textContent = stats.students || 0;
                 document.getElementById('statCourses').textContent = stats.courses || 0;
                 document.getElementById('statHalls').textContent = stats.halls || 0;
                 document.getElementById('statExams').textContent = stats.exams || 0;
+                
                 document.getElementById('deptBadge').textContent = stats.departments || 0;
                 document.getElementById('lecturerBadge').textContent = stats.lecturers || 0;
                 document.getElementById('studentBadge').textContent = stats.students || 0;
                 document.getElementById('courseBadge').textContent = stats.courses || 0;
                 document.getElementById('hallBadge').textContent = stats.halls || 0;
                 document.getElementById('examBadge').textContent = stats.exams || 0;
+                
                 const activity = document.getElementById('recentActivity');
                 activity.innerHTML = `
                         <div class="d-flex justify-content-between py-2 border-bottom">
@@ -2793,21 +2837,28 @@
 
             try {
                 const semester = document.getElementById('semesterSelect').value;
+                console.log(`📊 Loading timetable for Semester ${semester}`);
 
                 let data;
                 try {
                     data = await apiCall(`/timetable/by-semester/${semester}`);
+                    console.log('✅ Semester timetable loaded:', data);
                 } catch (error) {
+                    console.log('⚠️ Error loading semester timetable:', error.message);
+                    
+                    // If semester-specific timetable not found, try latest
                     if (error.message.includes('404') || error.message.includes('No timetable found')) {
                         console.log('No timetable for semester, trying latest...');
                         try {
                             data = await apiCall('/timetable/latest');
+                            console.log('✅ Latest timetable loaded:', data);
                             if (data && data.semester && data.semester != semester) {
                                 showToast(
                                     `Showing latest timetable (Semester ${data.semester}). No timetable found for Semester ${semester}.`,
                                     'warning');
                             }
                         } catch (latestError) {
+                            console.log('❌ No latest timetable found:', latestError.message);
                             display.innerHTML = `
                                     <div class="empty-state">
                                         <i class="fas fa-calendar-times"></i>
@@ -2919,7 +2970,7 @@
                 display.innerHTML = html;
 
             } catch (error) {
-                console.error('Error loading timetable:', error);
+                console.error('❌ Error loading timetable:', error);
                 const semester = document.getElementById('semesterSelect').value;
                 display.innerHTML = `
                         <div class="empty-state">
@@ -2941,6 +2992,8 @@
 
             showLoading(true);
             try {
+                console.log(`🔄 Generating timetable for Semester ${semester}...`);
+                
                 const result = await apiCall('/timetable/generate', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -2950,6 +3003,8 @@
                     })
                 });
 
+                console.log('✅ Generation result:', result);
+
                 if (result && result.message) {
                     showToast(`✅ ${result.message}`, 'success');
                 } else {
@@ -2958,7 +3013,7 @@
                 loadTimetable();
                 loadDashboard();
             } catch (error) {
-                console.error('Generate timetable error:', error);
+                console.error('❌ Generate timetable error:', error);
                 showToast('❌ ' + error.message, 'danger');
                 loadTimetable();
             } finally {
@@ -2978,7 +3033,7 @@
         }
 
         // ========================================================
-        // TIMETABLE EXPORT FUNCTIONS WITH LEVEL
+        // TIMETABLE EXPORT FUNCTIONS
         // ========================================================
         function getTimetableData() {
             const display = document.getElementById('timetableDisplay');
@@ -3028,8 +3083,7 @@
                 script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
                 document.head.appendChild(script);
                 const script2 = document.createElement('script');
-                script2.src =
-                'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+                script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
                 document.head.appendChild(script2);
                 script.onload = () => { setTimeout(() => generatePDF(data), 500); };
                 showToast('Loading PDF library...', 'info');
@@ -3051,27 +3105,22 @@
                 doc.setFontSize(10);
                 doc.setTextColor(100);
                 doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 37);
-                const tableData = data.map(item => [item.day, item.time, item.course, item.level, item.lecturer, item
-                    .venue, item.duration
-                ]);
+                const tableData = data.map(item => [item.day, item.time, item.course, item.level, item.lecturer, item.venue, item.duration]);
                 doc.autoTable({
                     startY: 45,
-                    head: [
-                        ['Day', 'Time', 'Course', 'Level', 'Lecturer', 'Venue', 'Duration']
-                    ],
+                    head: [['Day', 'Time', 'Course', 'Level', 'Lecturer', 'Venue', 'Duration']],
                     body: tableData,
                     theme: 'striped',
-                    headStyles: { fillColor: [26, 58, 92], textColor: [255, 255, 255], fontSize: 10,
-                        fontStyle: 'bold' },
+                    headStyles: { fillColor: [26, 58, 92], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
                     styles: { fontSize: 9, cellPadding: 3 },
-                    columnStyles: {
-                        0: { cellWidth: 22 },
-                        1: { cellWidth: 25 },
-                        2: { cellWidth: 35 },
+                    columnStyles: { 
+                        0: { cellWidth: 22 }, 
+                        1: { cellWidth: 25 }, 
+                        2: { cellWidth: 35 }, 
                         3: { cellWidth: 20 },
-                        4: { cellWidth: 30 },
-                        5: { cellWidth: 22 },
-                        6: { cellWidth: 18 }
+                        4: { cellWidth: 30 }, 
+                        5: { cellWidth: 22 }, 
+                        6: { cellWidth: 18 } 
                     }
                 });
                 const pageCount = doc.internal.getNumberOfPages();
@@ -3116,9 +3165,7 @@
                     ['Day', 'Time', 'Course', 'Level', 'Lecturer', 'Venue', 'Duration']
                 ];
                 data.forEach(item => {
-                    excelData.push([item.day, item.time, item.course, item.level, item.lecturer, item.venue, item
-                        .duration
-                    ]);
+                    excelData.push([item.day, item.time, item.course, item.level, item.lecturer, item.venue, item.duration]);
                 });
                 excelData.push([]);
                 excelData.push(['Total Sessions:', data.length]);
@@ -3127,8 +3174,7 @@
                 excelData.push(['Generated By:', document.getElementById('adminUsername').textContent || 'Admin']);
                 const wb = XLSX.utils.book_new();
                 const ws = XLSX.utils.aoa_to_sheet(excelData);
-                ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 25 }, { wch: 20 },
-                { wch: 15 }];
+                ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 15 }];
                 ws['!merges'] = [
                     { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
                     { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
@@ -3151,8 +3197,7 @@
                 csv += `Generated: ${new Date().toLocaleString()}\n\n`;
                 csv += 'Day,Time,Course,Level,Lecturer,Venue,Duration\n';
                 data.forEach(item => {
-                    csv +=
-                    `${item.day},${item.time},"${item.course}",${item.level},"${item.lecturer}",${item.venue},${item.duration}\n`;
+                    csv += `${item.day},${item.time},"${item.course}",${item.level},"${item.lecturer}",${item.venue},${item.duration}\n`;
                 });
                 csv += `\nTotal Sessions: ${data.length}\n`;
                 csv += `Session Duration: 2 hours\n`;
