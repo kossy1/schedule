@@ -1547,12 +1547,14 @@
         // ========================================================
         const API_URL = (() => {
             const hostname = window.location.hostname;
-            if (hostname === 'localhost' || hostname === '127.0.0.1') {
-                return 'http://localhost:5000/api';
+            // Check if running on Vercel
+            if (hostname.includes('vercel.app') || (hostname !== 'localhost' && hostname !== '127.0.0.1')) {
+                return '/api';
             }
-            // For Vercel, use relative path
-            return '/api';
+            return 'http://localhost:5000/api';
         })();
+
+        console.log('🌐 API_URL:', API_URL);
 
         const ADMIN_API = `${API_URL}/admin`;
         let token = localStorage.getItem('adminToken') || '';
@@ -1561,7 +1563,6 @@
         let sessionTimerInterval = null;
         let sessionTimeLeft = 60 * 60;
 
-        console.log('🌐 API URL:', API_URL);
         console.log('🔑 Token exists:', !!token);
 
         // ========================================================
@@ -1646,6 +1647,9 @@
             const toastEl = document.getElementById('toastMessage');
             if (toastEl) toast = new bootstrap.Toast(toastEl, { delay: 3000 });
             
+            // Test API connection
+            testApiConnection();
+            
             // Check if token exists and verify
             if (token) {
                 console.log('🔍 Token found, verifying...');
@@ -1685,6 +1689,23 @@
                 }
             });
         });
+
+        // ========================================================
+        // TEST API CONNECTION
+        // ========================================================
+        async function testApiConnection() {
+            try {
+                console.log('🔍 Testing API connection...');
+                const response = await fetch(`${API_URL}/health`);
+                const data = await response.json();
+                console.log('✅ API Health Check:', data);
+                return true;
+            } catch (error) {
+                console.error('❌ API Connection Failed:', error);
+                showToast('⚠️ Cannot connect to API. Please check your deployment.', 'warning');
+                return false;
+            }
+        }
 
         // ========================================================
         // TOAST NOTIFICATION
@@ -1799,6 +1820,7 @@
             
             try {
                 console.log('🔑 Attempting login...');
+                console.log('📡 API URL:', ADMIN_API);
                 
                 const response = await fetch(`${ADMIN_API}/login`, {
                     method: 'POST',
@@ -1812,11 +1834,16 @@
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
                     const text = await response.text();
-                    console.error('❌ Non-JSON login response:', text.substring(0, 200));
-                    throw new Error('Server returned HTML instead of JSON. Please check your deployment.');
+                    console.error('❌ Non-JSON login response:', text.substring(0, 500));
+                    
+                    if (text.includes('<!DOCTYPE html>') || text.includes('<html>')) {
+                        throw new Error('Server returned HTML. The API may not be deployed correctly. Please check your Vercel deployment.');
+                    }
+                    throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
                 }
                 
                 const data = await response.json();
+                console.log('📡 Login Response:', data);
                 
                 if (!response.ok) {
                     throw new Error(data.error || 'Login failed');

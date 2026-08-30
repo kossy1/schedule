@@ -49,8 +49,8 @@ def login():
             }
         }), 200
     except Exception as e:
-        print(f"Login error: {e}")
-        return jsonify({'error': 'An error occurred during login'}), 500
+        print(f"❌ Login error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/verify', methods=['GET'])
 @token_required
@@ -80,8 +80,24 @@ def refresh_token(payload):
             'message': 'Token refreshed successfully'
         }), 200
     except Exception as e:
-        print(f"Token refresh error: {e}")
-        return jsonify({'error': 'Failed to refresh token'}), 500
+        print(f"❌ Token refresh error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+# ============================================================
+# TEST ENDPOINT
+# ============================================================
+
+@admin_bp.route('/test', methods=['GET'])
+def test():
+    """Test endpoint to verify API is working."""
+    try:
+        return jsonify({
+            'status': 'ok',
+            'message': 'API is working',
+            'timestamp': datetime.utcnow().isoformat()
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # STATS
@@ -102,9 +118,11 @@ def get_stats(payload):
             'timetables': db.timetables.count_documents({}),
             'users': db.users.count_documents({})
         }
+        print(f"📊 Stats: {stats}")
         return jsonify(stats), 200
     except Exception as e:
-        print(f"Stats error: {e}")
+        print(f"❌ Stats error: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -119,7 +137,7 @@ def get_departments(payload):
         departments = list(db.departments.find({}, {'_id': 0}))
         return jsonify(departments), 200
     except Exception as e:
-        print(f"Get departments error: {e}")
+        print(f"❌ Get departments error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/departments', methods=['POST'])
@@ -145,7 +163,7 @@ def add_department(payload):
         })
         return jsonify({'message': 'Department added successfully'}), 201
     except Exception as e:
-        print(f"Add department error: {e}")
+        print(f"❌ Add department error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/departments/<dept_id>', methods=['PUT'])
@@ -169,7 +187,7 @@ def update_department(payload, dept_id):
         
         return jsonify({'message': 'Department updated successfully'}), 200
     except Exception as e:
-        print(f"Update department error: {e}")
+        print(f"❌ Update department error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/departments/<dept_id>', methods=['DELETE'])
@@ -184,7 +202,7 @@ def delete_department(payload, dept_id):
         
         return jsonify({'message': 'Department deleted successfully'}), 200
     except Exception as e:
-        print(f"Delete department error: {e}")
+        print(f"❌ Delete department error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -199,7 +217,7 @@ def get_lecturers(payload):
         lecturers = list(db.lecturers.find({}, {'_id': 0}))
         return jsonify(lecturers), 200
     except Exception as e:
-        print(f"Get lecturers error: {e}")
+        print(f"❌ Get lecturers error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/lecturers', methods=['POST'])
@@ -227,7 +245,7 @@ def add_lecturer(payload):
         })
         return jsonify({'message': 'Lecturer added successfully'}), 201
     except Exception as e:
-        print(f"Add lecturer error: {e}")
+        print(f"❌ Add lecturer error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/lecturers/<lecturer_id>', methods=['PUT'])
@@ -253,10 +271,10 @@ def update_lecturer(payload, lecturer_id):
         
         return jsonify({'message': 'Lecturer updated successfully'}), 200
     except Exception as e:
-        print(f"Update lecturer error: {e}")
+        print(f"❌ Update lecturer error: {e}")
         return jsonify({'error': str(e)}), 500
 
-@admin_bp.route('/lecturers/<lecturer_id>', methods(['DELETE'])
+@admin_bp.route('/lecturers/<lecturer_id>', methods=['DELETE'])
 @token_required
 def delete_lecturer(payload, lecturer_id):
     """Delete a lecturer."""
@@ -268,7 +286,7 @@ def delete_lecturer(payload, lecturer_id):
         
         return jsonify({'message': 'Lecturer deleted successfully'}), 200
     except Exception as e:
-        print(f"Delete lecturer error: {e}")
+        print(f"❌ Delete lecturer error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -283,7 +301,7 @@ def get_students(payload):
         students = list(db.students.find({}, {'_id': 0}))
         return jsonify(students), 200
     except Exception as e:
-        print(f"Get students error: {e}")
+        print(f"❌ Get students error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/students', methods=['POST'])
@@ -322,7 +340,7 @@ def add_student(payload):
         })
         return jsonify({'message': 'Student added successfully'}), 201
     except Exception as e:
-        print(f"Add student error: {e}")
+        print(f"❌ Add student error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/students/<matric>', methods=['PUT'])
@@ -370,7 +388,7 @@ def update_student(payload, matric):
         
         return jsonify({'message': 'Student updated successfully'}), 200
     except Exception as e:
-        print(f"Update student error: {e}")
+        print(f"❌ Update student error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/students/<matric>', methods=['DELETE'])
@@ -385,7 +403,7 @@ def delete_student(payload, matric):
         
         return jsonify({'message': 'Student deleted successfully'}), 200
     except Exception as e:
-        print(f"Delete student error: {e}")
+        print(f"❌ Delete student error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -429,8 +447,8 @@ def student_login():
         }), 200
         
     except Exception as e:
-        print(f"Student login error: {e}")
-        return jsonify({'error': 'An error occurred during login'}), 500
+        print(f"❌ Student login error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # STUDENT TIMETABLE VIEW
@@ -466,8 +484,8 @@ def get_student_timetable(matric):
         }), 200
         
     except Exception as e:
-        print(f"Student timetable error: {e}")
-        return jsonify({'error': 'An error occurred'}), 500
+        print(f"❌ Student timetable error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # LECTURER LOGIN
@@ -510,8 +528,8 @@ def lecturer_login():
         }), 200
         
     except Exception as e:
-        print(f"Lecturer login error: {e}")
-        return jsonify({'error': 'An error occurred during login'}), 500
+        print(f"❌ Lecturer login error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # LECTURER TIMETABLE VIEW
@@ -551,8 +569,8 @@ def get_lecturer_timetable(staff_id):
         }), 200
         
     except Exception as e:
-        print(f"Lecturer timetable error: {e}")
-        return jsonify({'error': 'An error occurred'}), 500
+        print(f"❌ Lecturer timetable error: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # COURSES CRUD
@@ -566,10 +584,10 @@ def get_courses(payload):
         courses = list(db.courses.find({}, {'_id': 0}))
         return jsonify(courses), 200
     except Exception as e:
-        print(f"Get courses error: {e}")
+        print(f"❌ Get courses error: {e}")
         return jsonify({'error': str(e)}), 500
 
-@admin_bp.route('/courses', methods=['POST'])
+@admin_bp.route('/courses', methods(['POST'])
 @token_required
 def add_course(payload):
     """Add a new course with manual code entry."""
@@ -600,7 +618,7 @@ def add_course(payload):
         })
         return jsonify({'message': 'Course added successfully'}), 201
     except Exception as e:
-        print(f"Add course error: {e}")
+        print(f"❌ Add course error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/courses/<course_code>', methods=['PUT'])
@@ -640,7 +658,7 @@ def update_course(payload, course_code):
         
         return jsonify({'message': 'Course updated successfully'}), 200
     except Exception as e:
-        print(f"Update course error: {e}")
+        print(f"❌ Update course error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/courses/<course_code>', methods=['DELETE'])
@@ -655,7 +673,7 @@ def delete_course(payload, course_code):
         
         return jsonify({'message': 'Course deleted successfully'}), 200
     except Exception as e:
-        print(f"Delete course error: {e}")
+        print(f"❌ Delete course error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -670,7 +688,7 @@ def get_halls(payload):
         halls = list(db.halls.find({}, {'_id': 0}))
         return jsonify(halls), 200
     except Exception as e:
-        print(f"Get halls error: {e}")
+        print(f"❌ Get halls error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/halls', methods=['POST'])
@@ -697,7 +715,7 @@ def add_hall(payload):
         })
         return jsonify({'message': 'Hall added successfully'}), 201
     except Exception as e:
-        print(f"Add hall error: {e}")
+        print(f"❌ Add hall error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/halls/<hall_id>', methods=['PUT'])
@@ -722,7 +740,7 @@ def update_hall(payload, hall_id):
         
         return jsonify({'message': 'Hall updated successfully'}), 200
     except Exception as e:
-        print(f"Update hall error: {e}")
+        print(f"❌ Update hall error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/halls/<hall_id>', methods=['DELETE'])
@@ -737,7 +755,7 @@ def delete_hall(payload, hall_id):
         
         return jsonify({'message': 'Hall deleted successfully'}), 200
     except Exception as e:
-        print(f"Delete hall error: {e}")
+        print(f"❌ Delete hall error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -752,7 +770,7 @@ def get_exams(payload):
         exams = list(db.exams.find({}, {'_id': 0}))
         return jsonify(exams), 200
     except Exception as e:
-        print(f"Get exams error: {e}")
+        print(f"❌ Get exams error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/exams', methods=['POST'])
@@ -786,7 +804,7 @@ def add_exam(payload):
         })
         return jsonify({'message': 'Exam added successfully'}), 201
     except Exception as e:
-        print(f"Add exam error: {e}")
+        print(f"❌ Add exam error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/exams/<exam_id>', methods=['PUT'])
@@ -812,7 +830,7 @@ def update_exam(payload, exam_id):
         
         return jsonify({'message': 'Exam updated successfully'}), 200
     except Exception as e:
-        print(f"Update exam error: {e}")
+        print(f"❌ Update exam error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/exams/<exam_id>', methods=['DELETE'])
@@ -827,7 +845,7 @@ def delete_exam(payload, exam_id):
         
         return jsonify({'message': 'Exam deleted successfully'}), 200
     except Exception as e:
-        print(f"Delete exam error: {e}")
+        print(f"❌ Delete exam error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/exams/generate', methods=['POST'])
@@ -874,7 +892,7 @@ def generate_exam_schedule(payload):
             'exams': exam_slots
         }), 200
     except Exception as e:
-        print(f"Error generating exams: {e}")
+        print(f"❌ Generate exams error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -896,7 +914,7 @@ def get_latest_timetable(payload):
         
         return jsonify(timetable), 200
     except Exception as e:
-        print(f"Error getting timetable: {e}")
+        print(f"❌ Get latest timetable error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/timetable/by-semester/<semester>', methods=['GET'])
@@ -916,7 +934,7 @@ def get_timetable_by_semester(payload, semester):
         
         return jsonify(timetable), 200
     except Exception as e:
-        print(f"Error getting timetable by semester: {e}")
+        print(f"❌ Get timetable by semester error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/timetable/generate', methods=['POST'])
@@ -1087,7 +1105,7 @@ def delete_timetable(payload):
             'message': f'Deleted {result.deleted_count} timetables'
         }), 200
     except Exception as e:
-        print(f"Error deleting timetables: {e}")
+        print(f"❌ Delete timetable error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -1110,7 +1128,7 @@ def get_public_timetable():
             'generated_at': timetable.get('generated_at')
         }), 200
     except Exception as e:
-        print(f"Public timetable error: {e}")
+        print(f"❌ Public timetable error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -1144,7 +1162,7 @@ def enroll_student(payload, matric):
             'courses': courses
         }), 200
     except Exception as e:
-        print(f"Enroll student error: {e}")
+        print(f"❌ Enroll student error: {e}")
         return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/students/<matric>/courses', methods=['GET'])
@@ -1162,7 +1180,7 @@ def get_student_courses(matric):
             'courses': student.get('courses', [])
         }), 200
     except Exception as e:
-        print(f"Get student courses error: {e}")
+        print(f"❌ Get student courses error: {e}")
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -1187,5 +1205,5 @@ def debug_courses(payload):
                 'message': 'No courses found'
             }), 200
     except Exception as e:
-        print(f"Debug courses error: {e}")
+        print(f"❌ Debug courses error: {e}")
         return jsonify({'error': str(e)}), 500
