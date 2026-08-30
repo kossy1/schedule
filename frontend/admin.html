@@ -11,7 +11,6 @@
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <style>
-        /* ... (keep existing styles) ... */
         :root {
             --primary: #1a3a5c;
             --primary-light: #2a5a8c;
@@ -715,6 +714,18 @@
             color: white !important;
             border: none !important;
         }
+        
+        /* Export Button Styles */
+        .export-dropdown .dropdown-menu {
+            min-width: 200px;
+        }
+        .export-dropdown .dropdown-item i {
+            width: 20px;
+        }
+        .export-dropdown .dropdown-item:hover {
+            background: var(--primary);
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -1080,7 +1091,7 @@
                 </div>
             </div>
 
-            <!-- ===== TIMETABLE SECTION ===== -->
+            <!-- ===== TIMETABLE SECTION WITH EXPORT ===== -->
             <div id="section-timetable" class="section-content">
                 <div class="content-panel">
                     <div class="panel-header">
@@ -1089,9 +1100,29 @@
                             <button class="btn btn-success me-1" onclick="generateClassTimetable()">
                                 <i class="fas fa-sync-alt me-1"></i> Generate
                             </button>
-                            <button class="btn btn-danger" onclick="clearTimetable()">
+                            <button class="btn btn-danger me-1" onclick="clearTimetable()">
                                 <i class="fas fa-trash me-1"></i> Clear
                             </button>
+                            <div class="btn-group export-dropdown">
+                                <button class="btn btn-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="fas fa-file-export me-1"></i> Export
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end">
+                                    <li><a class="dropdown-item" onclick="exportTimetable('pdf')">
+                                        <i class="fas fa-file-pdf text-danger me-2"></i> Export as PDF
+                                    </a></li>
+                                    <li><a class="dropdown-item" onclick="exportTimetable('excel')">
+                                        <i class="fas fa-file-excel text-success me-2"></i> Export as Excel
+                                    </a></li>
+                                    <li><a class="dropdown-item" onclick="exportTimetable('csv')">
+                                        <i class="fas fa-file-csv text-primary me-2"></i> Export as CSV
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item" onclick="printTimetable()">
+                                        <i class="fas fa-print text-secondary me-2"></i> Print
+                                    </a></li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
                     <div id="timetableDisplay">
@@ -1319,7 +1350,7 @@
         </div>
     </div>
 
-    <!-- ===== COURSE MODAL ===== -->
+    <!-- Course Modal -->
     <div class="modal fade" id="courseModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
@@ -1518,7 +1549,7 @@
         let toast = null;
         let csvData = [];
         let sessionTimerInterval = null;
-        let sessionTimeLeft = 60 * 60; // 60 minutes in seconds
+        let sessionTimeLeft = 60 * 60;
 
         // ========================================================
         // AUTO-ID GENERATORS
@@ -1557,19 +1588,13 @@
         function startSessionTimer() {
             sessionTimeLeft = 60 * 60;
             updateTimerDisplay();
-
-            if (sessionTimerInterval) {
-                clearInterval(sessionTimerInterval);
-            }
-
+            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
             sessionTimerInterval = setInterval(() => {
                 sessionTimeLeft--;
                 updateTimerDisplay();
-
                 if (sessionTimeLeft <= 300) {
                     document.getElementById('timerDisplay').style.color = '#dc3545';
                 }
-
                 if (sessionTimeLeft <= 0) {
                     clearInterval(sessionTimerInterval);
                     handleSessionExpired();
@@ -1603,29 +1628,16 @@
         // ========================================================
         document.addEventListener('DOMContentLoaded', function() {
             const toastEl = document.getElementById('toastMessage');
-            if (toastEl) {
-                toast = new bootstrap.Toast(toastEl, { delay: 3000 });
-            }
+            if (toastEl) toast = new bootstrap.Toast(toastEl, { delay: 3000 });
+            if (token) { verifyToken();
+                startSessionTimer(); }
 
-            // Check if token exists and verify it
-            if (token) {
-                verifyToken();
-                startSessionTimer();
-            }
-
-            // CSV Drag and Drop
             const dropArea = document.getElementById('csvDropArea');
             if (dropArea) {
-                dropArea.addEventListener('dragover', function(e) {
-                    e.preventDefault();
-                    this.classList.add('dragover');
-                });
-
-                dropArea.addEventListener('dragleave', function(e) {
-                    e.preventDefault();
-                    this.classList.remove('dragover');
-                });
-
+                dropArea.addEventListener('dragover', function(e) { e.preventDefault();
+                    this.classList.add('dragover'); });
+                dropArea.addEventListener('dragleave', function(e) { e.preventDefault();
+                    this.classList.remove('dragover'); });
                 dropArea.addEventListener('drop', function(e) {
                     e.preventDefault();
                     this.classList.remove('dragover');
@@ -1647,33 +1659,25 @@
                 }
             });
 
-            // Auto token refresh every 14 minutes (only if token exists)
+            // Auto token refresh every 14 minutes
             setInterval(async () => {
                 if (token) {
                     try {
                         const response = await fetch(`${ADMIN_API}/refresh`, {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'Authorization': `Bearer ${token}`
-                            }
+                            headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
                         });
-
                         if (response.ok) {
                             const data = await response.json();
                             if (data.token) {
                                 token = data.token;
                                 localStorage.setItem('adminToken', token);
                                 resetSessionTimer();
-                                console.log('🔄 Token auto-refreshed at', new Date().toLocaleTimeString());
                             }
                         } else {
-                            // Token refresh failed - session expired
                             localStorage.removeItem('adminToken');
                             token = '';
-                            if (sessionTimerInterval) {
-                                clearInterval(sessionTimerInterval);
-                            }
+                            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
                             document.getElementById('loginPage').style.display = 'flex';
                             document.getElementById('dashboardPage').style.display = 'none';
                             showToast('Session expired. Please login again.', 'warning');
@@ -1682,7 +1686,7 @@
                         console.error('Auto token refresh failed:', error);
                     }
                 }
-            }, 14 * 60 * 1000); // 14 minutes
+            }, 14 * 60 * 1000);
         });
 
         // ========================================================
@@ -1691,22 +1695,12 @@
         function showToast(message, type = 'success') {
             const toastEl = document.getElementById('toastMessage');
             const toastBody = document.getElementById('toastBody');
-
             if (!toastEl) return;
-
-            const bgColors = {
-                success: 'bg-success',
-                danger: 'bg-danger',
-                warning: 'bg-warning text-dark',
-                info: 'bg-info text-dark'
-            };
-
+            const bgColors = { success: 'bg-success', danger: 'bg-danger', warning: 'bg-warning text-dark',
+                info: 'bg-info text-dark' };
             toastEl.className = `toast align-items-center text-white border-0 ${bgColors[type] || 'bg-success'}`;
             toastBody.textContent = message;
-
-            if (!toast) {
-                toast = new bootstrap.Toast(toastEl, { delay: 3000 });
-            }
+            if (!toast) toast = new bootstrap.Toast(toastEl, { delay: 3000 });
             toast.show();
         }
 
@@ -1718,7 +1712,7 @@
         }
 
         // ========================================================
-        // API HELPER with Token Expiration Handling
+        // API HELPER
         // ========================================================
         async function apiCall(endpoint, options = {}, retryCount = 0) {
             const url = endpoint.startsWith('http') ? endpoint : `${ADMIN_API}${endpoint}`;
@@ -1727,54 +1721,29 @@
                 ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
                 ...(options.headers || {})
             };
-
             try {
-                console.log(`📡 API Call: ${url}`, { method: options.method || 'GET' });
-
-                const response = await fetch(url, {
-                    ...options,
-                    headers
-                });
-
-                console.log(`📡 Response Status: ${response.status}`);
-
-                // Check if token is expired (401)
+                const response = await fetch(url, { ...options, headers });
                 if (response.status === 401) {
-                    console.warn('⚠️ Token expired (401). Attempting to refresh...');
-                    
-                    // Try to refresh token once
                     if (retryCount === 0 && token) {
                         try {
                             const refreshResponse = await fetch(`${ADMIN_API}/refresh`, {
                                 method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'Authorization': `Bearer ${token}`
-                                }
+                                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` }
                             });
-
                             if (refreshResponse.ok) {
                                 const refreshData = await refreshResponse.json();
                                 if (refreshData.token) {
                                     token = refreshData.token;
                                     localStorage.setItem('adminToken', token);
                                     resetSessionTimer();
-                                    console.log('✅ Token refreshed successfully, retrying request...');
-                                    // Retry the original request with new token
                                     return await apiCall(endpoint, options, retryCount + 1);
                                 }
                             }
-                        } catch (refreshError) {
-                            console.error('❌ Token refresh failed:', refreshError);
-                        }
+                        } catch (refreshError) { console.error('Token refresh failed:', refreshError); }
                     }
-
-                    // If refresh failed or already retried, redirect to login
                     localStorage.removeItem('adminToken');
                     token = '';
-                    if (sessionTimerInterval) {
-                        clearInterval(sessionTimerInterval);
-                    }
+                    if (sessionTimerInterval) clearInterval(sessionTimerInterval);
                     showToast('Session expired. Please login again.', 'warning');
                     setTimeout(() => {
                         document.getElementById('loginPage').style.display = 'flex';
@@ -1782,29 +1751,19 @@
                     }, 1500);
                     throw new Error('Session expired. Please login again.');
                 }
-
                 const contentType = response.headers.get('content-type');
                 if (!contentType || !contentType.includes('application/json')) {
                     const text = await response.text();
-                    console.error('❌ Non-JSON response:', text.substring(0, 200));
                     throw new Error(`Server returned non-JSON response: ${text.substring(0, 100)}`);
                 }
-
                 const data = await response.json();
-
                 if (!response.ok) {
-                    console.error('❌ API Error Response:', data);
                     throw new Error(data.error || data.message || `HTTP ${response.status}`);
                 }
-
-                // Reset session timer on successful API call
-                if (response.status !== 401) {
-                    resetSessionTimer();
-                }
-
+                if (response.status !== 401) resetSessionTimer();
                 return data;
             } catch (error) {
-                console.error('❌ API Call Error:', error);
+                console.error('API Call Error:', error);
                 throw error;
             }
         }
@@ -1817,45 +1776,26 @@
             const username = document.getElementById('username').value;
             const password = document.getElementById('password').value;
             const btn = document.getElementById('loginBtn');
-
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Logging in...';
-
             try {
-                console.log('🔑 Attempting login...');
-                
                 const response = await fetch(`${ADMIN_API}/login`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username, password })
                 });
-
                 const data = await response.json();
-                console.log('📡 Login Response:', { status: response.status, ok: response.ok });
-
-                if (!response.ok) {
-                    throw new Error(data.error || 'Login failed');
-                }
-
-                if (!data.token) {
-                    throw new Error('No token received from server');
-                }
-
+                if (!response.ok) throw new Error(data.error || 'Login failed');
+                if (!data.token) throw new Error('No token received');
                 token = data.token;
                 localStorage.setItem('adminToken', token);
-                console.log('✅ Token stored in localStorage');
-
                 document.getElementById('adminUsername').textContent = data.user?.username || 'admin';
                 showToast('✅ Login successful!', 'success');
-
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('dashboardPage').style.display = 'block';
-
                 startSessionTimer();
                 await loadDashboard();
-
             } catch (error) {
-                console.error('❌ Login Error:', error);
                 showToast('❌ ' + error.message, 'danger');
             } finally {
                 btn.disabled = false;
@@ -1865,23 +1805,16 @@
 
         async function verifyToken() {
             try {
-                console.log('🔍 Verifying token...');
                 await apiCall('/verify');
-                console.log('✅ Token verified successfully');
                 document.getElementById('loginPage').style.display = 'none';
                 document.getElementById('dashboardPage').style.display = 'block';
                 await loadDashboard();
             } catch (error) {
-                console.warn('⚠️ Token verification failed:', error.message);
-                // Token is invalid or expired
                 localStorage.removeItem('adminToken');
                 token = '';
-                if (sessionTimerInterval) {
-                    clearInterval(sessionTimerInterval);
-                }
+                if (sessionTimerInterval) clearInterval(sessionTimerInterval);
                 document.getElementById('loginPage').style.display = 'flex';
                 document.getElementById('dashboardPage').style.display = 'none';
-                // Don't show error toast on auto-verify
                 if (!error.message.includes('Session expired')) {
                     showToast('Session expired. Please login again.', 'warning');
                 }
@@ -1891,9 +1824,7 @@
         function handleLogout() {
             localStorage.removeItem('adminToken');
             token = '';
-            if (sessionTimerInterval) {
-                clearInterval(sessionTimerInterval);
-            }
+            if (sessionTimerInterval) clearInterval(sessionTimerInterval);
             document.getElementById('loginPage').style.display = 'flex';
             document.getElementById('dashboardPage').style.display = 'none';
             showToast('👋 Logged out', 'info');
@@ -1909,7 +1840,6 @@
         function showSection(section) {
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.querySelector(`.nav-item[data-section="${section}"]`)?.classList.add('active');
-
             const titles = {
                 dashboard: 'Dashboard',
                 departments: 'Department Management',
@@ -1921,12 +1851,9 @@
                 timetable: 'Class Timetable'
             };
             document.getElementById('sectionTitle').textContent = titles[section] || section;
-
             document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
             document.getElementById(`section-${section}`)?.classList.add('active');
-
             document.getElementById('sidebar').classList.remove('open');
-
             switch (section) {
                 case 'dashboard':
                     loadDashboard();
@@ -1960,24 +1887,19 @@
         // ========================================================
         async function loadDashboard() {
             try {
-                console.log('📊 Loading dashboard stats...');
                 const stats = await apiCall('/stats');
-                console.log('📊 Stats received:', stats);
-
                 document.getElementById('statDepartments').textContent = stats.departments || 0;
                 document.getElementById('statLecturers').textContent = stats.lecturers || 0;
                 document.getElementById('statStudents').textContent = stats.students || 0;
                 document.getElementById('statCourses').textContent = stats.courses || 0;
                 document.getElementById('statHalls').textContent = stats.halls || 0;
                 document.getElementById('statExams').textContent = stats.exams || 0;
-
                 document.getElementById('deptBadge').textContent = stats.departments || 0;
                 document.getElementById('lecturerBadge').textContent = stats.lecturers || 0;
                 document.getElementById('studentBadge').textContent = stats.students || 0;
                 document.getElementById('courseBadge').textContent = stats.courses || 0;
                 document.getElementById('hallBadge').textContent = stats.halls || 0;
                 document.getElementById('examBadge').textContent = stats.exams || 0;
-
                 const activity = document.getElementById('recentActivity');
                 activity.innerHTML = `
                         <div class="d-flex justify-content-between py-2 border-bottom">
@@ -2007,7 +1929,6 @@
                     `;
             } catch (error) {
                 console.error('Error loading dashboard:', error);
-                // Show a retry button if stats fail
                 const activity = document.getElementById('recentActivity');
                 activity.innerHTML = `
                         <div class="d-flex justify-content-between py-2">
@@ -2026,15 +1947,12 @@
         async function loadDepartments() {
             const body = document.getElementById('departmentsBody');
             body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">Loading...</td></tr>';
-
             try {
                 const departments = await apiCall('/departments');
-
                 if (departments.length === 0) {
                     body.innerHTML = '<tr><td colspan="5" class="text-center text-muted">No departments found</td></tr>';
                     return;
                 }
-
                 body.innerHTML = departments.map(d => `
                         <tr>
                             <td><strong>${d.id}</strong></td>
@@ -2053,18 +1971,10 @@
                             </td>
                         </tr>
                     `).join('');
-
-                if ($.fn.DataTable.isDataTable('#departmentsTable')) {
-                    $('#departmentsTable').DataTable().destroy();
-                }
-                $('#departmentsTable').DataTable({
-                    pageLength: 10,
-                    order: [
+                if ($.fn.DataTable.isDataTable('#departmentsTable')) $('#departmentsTable').DataTable().destroy();
+                $('#departmentsTable').DataTable({ pageLength: 10, order: [
                         [0, 'asc']
-                    ],
-                    responsive: true
-                });
-
+                    ], responsive: true });
             } catch (error) {
                 body.innerHTML = `<tr><td colspan="5" class="text-center text-danger">${error.message}</td></tr>`;
             }
@@ -2074,7 +1984,6 @@
             document.getElementById('departmentForm').reset();
             document.getElementById('deptEditId').value = '';
             document.getElementById('departmentModalTitle').textContent = 'Add Department';
-
             if (data) {
                 document.getElementById('deptEditId').value = data.id;
                 document.getElementById('deptId').value = data.id;
@@ -2088,7 +1997,6 @@
                 document.getElementById('deptId').value = newId;
                 document.getElementById('deptIdPreview').textContent = newId;
             }
-
             new bootstrap.Modal(document.getElementById('departmentModal')).show();
         }
 
@@ -2114,16 +2022,10 @@
             const code = document.getElementById('deptCode').value;
             const head = document.getElementById('deptHead').value;
             const editId = document.getElementById('deptEditId').value;
-
-            if (!name || !code) {
-                showToast('Please fill all required fields', 'warning');
-                return;
-            }
-
+            if (!name || !code) { showToast('Please fill all required fields', 'warning'); return; }
             const data = { id, name, code, head };
             const url = editId ? `/departments/${editId}` : '/departments';
             const method = editId ? 'PUT' : 'POST';
-
             showLoading(true);
             try {
                 await apiCall(url, { method, body: JSON.stringify(data) });
@@ -2131,27 +2033,18 @@
                 bootstrap.Modal.getInstance(document.getElementById('departmentModal')).hide();
                 loadDepartments();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         async function deleteDepartment(id) {
             if (!confirm(`Delete department ${id}?`)) return;
-
             showLoading(true);
             try {
                 await apiCall(`/departments/${id}`, { method: 'DELETE' });
                 showToast('Department deleted!', 'success');
                 loadDepartments();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         // ========================================================
@@ -2160,22 +2053,15 @@
         async function loadLecturers() {
             const body = document.getElementById('lecturersBody');
             body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>';
-
             try {
-                const [lecturers, departments] = await Promise.all([
-                    apiCall('/lecturers'),
-                    apiCall('/departments')
-                ]);
-
+                const [lecturers, departments] = await Promise.all([apiCall('/lecturers'), apiCall('/departments')]);
                 const deptSelect = document.getElementById('lecturerDept');
                 deptSelect.innerHTML = '<option value="">Select Department</option>' +
                     departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-
                 if (lecturers.length === 0) {
                     body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No lecturers found</td></tr>';
                     return;
                 }
-
                 body.innerHTML = lecturers.map(l => `
                         <tr>
                             <td><strong>${l.id}</strong></td>
@@ -2195,18 +2081,10 @@
                             </td>
                         </tr>
                     `).join('');
-
-                if ($.fn.DataTable.isDataTable('#lecturersTable')) {
-                    $('#lecturersTable').DataTable().destroy();
-                }
-                $('#lecturersTable').DataTable({
-                    pageLength: 10,
-                    order: [
+                if ($.fn.DataTable.isDataTable('#lecturersTable')) $('#lecturersTable').DataTable().destroy();
+                $('#lecturersTable').DataTable({ pageLength: 10, order: [
                         [0, 'asc']
-                    ],
-                    responsive: true
-                });
-
+                    ], responsive: true });
             } catch (error) {
                 body.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${error.message}</td></tr>`;
             }
@@ -2216,7 +2094,6 @@
             document.getElementById('lecturerForm').reset();
             document.getElementById('lecturerEditId').value = '';
             document.getElementById('lecturerModalTitle').textContent = 'Add Lecturer';
-
             if (data) {
                 document.getElementById('lecturerEditId').value = data.id;
                 document.getElementById('lecturerId').value = data.id;
@@ -2232,7 +2109,6 @@
                 document.getElementById('lecturerId').value = newId;
                 document.getElementById('lecturerIdPreview').textContent = newId;
             }
-
             new bootstrap.Modal(document.getElementById('lecturerModal')).show();
         }
 
@@ -2261,16 +2137,11 @@
             const email = document.getElementById('lecturerEmail').value;
             const phone = document.getElementById('lecturerPhone').value;
             const editId = document.getElementById('lecturerEditId').value;
-
-            if (!name || !surname || !department || !email) {
-                showToast('Please fill all required fields', 'warning');
-                return;
-            }
-
+            if (!name || !surname || !department || !email) { showToast('Please fill all required fields',
+                'warning'); return; }
             const data = { id, name, surname, department, email, phone };
             const url = editId ? `/lecturers/${editId}` : '/lecturers';
             const method = editId ? 'PUT' : 'POST';
-
             showLoading(true);
             try {
                 await apiCall(url, { method, body: JSON.stringify(data) });
@@ -2278,27 +2149,18 @@
                 bootstrap.Modal.getInstance(document.getElementById('lecturerModal')).hide();
                 loadLecturers();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         async function deleteLecturer(id) {
             if (!confirm(`Delete lecturer ${id}?`)) return;
-
             showLoading(true);
             try {
                 await apiCall(`/lecturers/${id}`, { method: 'DELETE' });
                 showToast('Lecturer deleted!', 'success');
                 loadLecturers();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         // ========================================================
@@ -2307,29 +2169,16 @@
         async function loadStudents() {
             const body = document.getElementById('studentsBody');
             body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>';
-
             try {
-                const [students, departments] = await Promise.all([
-                    apiCall('/students'),
-                    apiCall('/departments')
-                ]);
-
+                const [students, departments] = await Promise.all([apiCall('/students'), apiCall('/departments')]);
                 const deptSelect = document.getElementById('studentDept');
                 deptSelect.innerHTML = '<option value="">Select Department</option>' +
                     departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-
                 if (students.length === 0) {
                     body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No students found</td></tr>';
                     return;
                 }
-
-                const levelDisplay = {
-                    'ND1': 'ND I',
-                    'ND2': 'ND II',
-                    'HND1': 'HND I',
-                    'HND2': 'HND II'
-                };
-
+                const levelDisplay = { 'ND1': 'ND I', 'ND2': 'ND II', 'HND1': 'HND I', 'HND2': 'HND II' };
                 body.innerHTML = students.map(s => `
                         <tr>
                             <td><strong>${s.matric}</strong></td>
@@ -2350,18 +2199,10 @@
                             </td>
                         </tr>
                     `).join('');
-
-                if ($.fn.DataTable.isDataTable('#studentsTable')) {
-                    $('#studentsTable').DataTable().destroy();
-                }
-                $('#studentsTable').DataTable({
-                    pageLength: 10,
-                    order: [
+                if ($.fn.DataTable.isDataTable('#studentsTable')) $('#studentsTable').DataTable().destroy();
+                $('#studentsTable').DataTable({ pageLength: 10, order: [
                         [0, 'asc']
-                    ],
-                    responsive: true
-                });
-
+                    ], responsive: true });
             } catch (error) {
                 body.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${error.message}</td></tr>`;
             }
@@ -2372,7 +2213,6 @@
             document.getElementById('studentEditId').value = '';
             document.getElementById('studentModalTitle').textContent = 'Add Student';
             document.getElementById('studentMatric').disabled = false;
-
             if (data) {
                 document.getElementById('studentEditId').value = data.matric;
                 document.getElementById('studentMatric').value = data.matric;
@@ -2385,7 +2225,6 @@
                 document.getElementById('studentPhone').value = data.phone || '';
                 document.getElementById('studentModalTitle').textContent = 'Edit Student';
             }
-
             new bootstrap.Modal(document.getElementById('studentModal')).show();
         }
 
@@ -2416,27 +2255,16 @@
             const email = document.getElementById('studentEmail').value.trim();
             const phone = document.getElementById('studentPhone').value.trim();
             const editId = document.getElementById('studentEditId').value;
-
-            if (!matric || !/^\d+$/.test(matric)) {
-                showToast('Matric number must contain only numbers', 'warning');
-                return;
-            }
-
-            if (!name || !surname || !department || !level) {
-                showToast('Please fill all required fields', 'warning');
-                return;
-            }
-
+            if (!matric || !/^\d+$/.test(matric)) { showToast('Matric number must contain only numbers',
+                'warning'); return; }
+            if (!name || !surname || !department || !level) { showToast('Please fill all required fields',
+                'warning'); return; }
             const validLevels = ['ND1', 'ND2', 'HND1', 'HND2'];
-            if (!validLevels.includes(level)) {
-                showToast('Invalid level. Must be ND1, ND2, HND1, or HND2', 'warning');
-                return;
-            }
-
+            if (!validLevels.includes(level)) { showToast('Invalid level. Must be ND1, ND2, HND1, or HND2',
+                'warning'); return; }
             const data = { matric, name, surname, department, level, email, phone };
             const url = editId ? `/students/${editId}` : '/students';
             const method = editId ? 'PUT' : 'POST';
-
             showLoading(true);
             try {
                 await apiCall(url, { method, body: JSON.stringify(data) });
@@ -2444,27 +2272,18 @@
                 bootstrap.Modal.getInstance(document.getElementById('studentModal')).hide();
                 loadStudents();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         async function deleteStudent(matric) {
             if (!confirm(`Delete student ${matric}?`)) return;
-
             showLoading(true);
             try {
                 await apiCall(`/students/${matric}`, { method: 'DELETE' });
                 showToast('Student deleted!', 'success');
                 loadStudents();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         // ========================================================
@@ -2483,64 +2302,31 @@
         function handleCSVFile(event) {
             const file = event.target.files[0];
             if (!file) return;
-
             const reader = new FileReader();
-            reader.onload = function(e) {
-                const text = e.target.result;
-                parseCSV(text);
-            };
+            reader.onload = function(e) { parseCSV(e.target.result); };
             reader.readAsText(file);
         }
 
         function parseCSV(text) {
             const lines = text.split('\n').filter(line => line.trim());
-            if (lines.length === 0) {
-                showToast('CSV file is empty', 'warning');
-                return;
-            }
-
+            if (lines.length === 0) { showToast('CSV file is empty', 'warning'); return; }
             const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
             const expected = ['matric', 'name', 'surname', 'department_id', 'level', 'email', 'phone'];
-
             const missing = expected.filter(h => !headers.includes(h));
-            if (missing.length > 0) {
-                showToast(`Missing columns: ${missing.join(', ')}`, 'warning');
-                return;
-            }
-
+            if (missing.length > 0) { showToast(`Missing columns: ${missing.join(', ')}`, 'warning'); return; }
             csvData = [];
             const previewBody = document.getElementById('csvPreviewBody');
             previewBody.innerHTML = '';
-
             const validLevels = ['ND1', 'ND2', 'HND1', 'HND2'];
-            const levelDisplay = {
-                'ND1': 'ND I',
-                'ND2': 'ND II',
-                'HND1': 'HND I',
-                'HND2': 'HND II'
-            };
-
+            const levelDisplay = { 'ND1': 'ND I', 'ND2': 'ND II', 'HND1': 'HND I', 'HND2': 'HND II' };
             for (let i = 1; i < lines.length; i++) {
                 const values = lines[i].split(',').map(v => v.trim());
                 const row = {};
-                headers.forEach((h, idx) => {
-                    row[h] = values[idx] || '';
-                });
-
-                if (!row.matric || !row.name || !row.surname || !row.department_id || !row.level) {
-                    continue;
-                }
-
-                if (!/^\d+$/.test(row.matric)) {
-                    continue;
-                }
-
-                if (!validLevels.includes(row.level)) {
-                    continue;
-                }
-
+                headers.forEach((h, idx) => { row[h] = values[idx] || ''; });
+                if (!row.matric || !row.name || !row.surname || !row.department_id || !row.level) continue;
+                if (!/^\d+$/.test(row.matric)) continue;
+                if (!validLevels.includes(row.level)) continue;
                 csvData.push(row);
-
                 previewBody.innerHTML += `
                         <tr>
                             <td>${i}</td>
@@ -2554,12 +2340,8 @@
                         </tr>
                     `;
             }
-
-            if (csvData.length === 0) {
-                showToast('No valid data found in CSV. Check format and try again.', 'warning');
-                return;
-            }
-
+            if (csvData.length === 0) { showToast('No valid data found in CSV. Check format and try again.',
+                'warning'); return; }
             document.getElementById('csvRowCount').textContent = csvData.length;
             document.getElementById('csvPreview').style.display = 'block';
             document.getElementById('csvUploadBtn').disabled = false;
@@ -2567,64 +2349,38 @@
         }
 
         async function uploadCSV() {
-            if (csvData.length === 0) {
-                showToast('No data to upload', 'warning');
-                return;
-            }
-
+            if (csvData.length === 0) { showToast('No data to upload', 'warning'); return; }
             const btn = document.getElementById('csvUploadBtn');
             const progress = document.getElementById('uploadProgress');
             const progressBar = document.getElementById('uploadProgressBar');
-
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Uploading...';
             progress.style.display = 'block';
-
-            let success = 0;
-            let failed = 0;
-            const errors = [];
-
+            let success = 0,
+                failed = 0,
+                errors = [];
             for (let i = 0; i < csvData.length; i++) {
                 const row = csvData[i];
                 const progressPct = ((i + 1) / csvData.length * 100);
                 progressBar.style.width = `${progressPct}%`;
-
                 try {
-                    const data = {
-                        matric: row.matric,
-                        name: row.name,
-                        surname: row.surname,
-                        department: row.department_id,
-                        level: row.level,
-                        email: row.email || '',
-                        phone: row.phone || ''
-                    };
-
-                    await apiCall('/students', {
-                        method: 'POST',
-                        body: JSON.stringify(data)
-                    });
+                    const data = { matric: row.matric, name: row.name, surname: row.surname, department: row
+                            .department_id, level: row.level, email: row.email || '', phone: row.phone || '' };
+                    await apiCall('/students', { method: 'POST', body: JSON.stringify(data) });
                     success++;
                 } catch (error) {
                     failed++;
                     errors.push(`Row ${i+1}: ${error.message}`);
-                    console.error(`Failed to upload student ${i+1}:`, error);
                 }
             }
-
             progressBar.style.width = '100%';
-
             setTimeout(() => {
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-upload me-1"></i> Upload Students';
                 progress.style.display = 'none';
-
                 bootstrap.Modal.getInstance(document.getElementById('csvUploadModal')).hide();
-
                 let message = `✅ ${success} students uploaded, ${failed} failed`;
-                if (failed > 0) {
-                    message += `. Errors: ${errors.join('; ')}`;
-                }
+                if (failed > 0) message += `. Errors: ${errors.join('; ')}`;
                 showToast(message, success > 0 ? 'success' : 'danger');
                 loadStudents();
                 loadDashboard();
@@ -2637,34 +2393,21 @@
         async function loadCourses() {
             const body = document.getElementById('coursesBody');
             body.innerHTML = '<tr><td colspan="8" class="text-center text-muted">Loading...</td></tr>';
-
             try {
-                const [courses, departments, lecturers] = await Promise.all([
-                    apiCall('/courses'),
-                    apiCall('/departments'),
+                const [courses, departments, lecturers] = await Promise.all([apiCall('/courses'), apiCall('/departments'),
                     apiCall('/lecturers')
                 ]);
-
                 const deptSelect = document.getElementById('courseDept');
                 deptSelect.innerHTML = '<option value="">Select Department</option>' +
                     departments.map(d => `<option value="${d.id}">${d.name}</option>`).join('');
-
                 const lecturerSelect = document.getElementById('courseLecturer');
                 lecturerSelect.innerHTML = '<option value="">Select Lecturer</option>' +
                     lecturers.map(l => `<option value="${l.id}">${l.name}</option>`).join('');
-
                 if (courses.length === 0) {
                     body.innerHTML = '<tr><td colspan="8" class="text-center text-muted">No courses found</td></tr>';
                     return;
                 }
-
-                const levelDisplay = {
-                    'ND1': 'ND I',
-                    'ND2': 'ND II',
-                    'HND1': 'HND I',
-                    'HND2': 'HND II'
-                };
-
+                const levelDisplay = { 'ND1': 'ND I', 'ND2': 'ND II', 'HND1': 'HND I', 'HND2': 'HND II' };
                 body.innerHTML = courses.map(c => `
                         <tr>
                             <td><strong>${c.code}</strong></td>
@@ -2686,18 +2429,10 @@
                             </td>
                         </tr>
                     `).join('');
-
-                if ($.fn.DataTable.isDataTable('#coursesTable')) {
-                    $('#coursesTable').DataTable().destroy();
-                }
-                $('#coursesTable').DataTable({
-                    pageLength: 10,
-                    order: [
+                if ($.fn.DataTable.isDataTable('#coursesTable')) $('#coursesTable').DataTable().destroy();
+                $('#coursesTable').DataTable({ pageLength: 10, order: [
                         [0, 'asc']
-                    ],
-                    responsive: true
-                });
-
+                    ], responsive: true });
             } catch (error) {
                 body.innerHTML = `<tr><td colspan="8" class="text-center text-danger">${error.message}</td></tr>`;
             }
@@ -2709,7 +2444,6 @@
             document.getElementById('courseModalTitle').textContent = 'Add Course';
             document.getElementById('courseCode').disabled = false;
             document.getElementById('courseCode').readOnly = false;
-
             if (data) {
                 document.getElementById('courseEditId').value = data.code;
                 document.getElementById('courseCode').value = data.code;
@@ -2723,7 +2457,6 @@
                 document.getElementById('courseSemester').value = data.semester;
                 document.getElementById('courseModalTitle').textContent = 'Edit Course';
             }
-
             new bootstrap.Modal(document.getElementById('courseModal')).show();
         }
 
@@ -2738,7 +2471,6 @@
                     else if (levelText.includes('ND II')) level = 'ND2';
                     else if (levelText.includes('HND I')) level = 'HND1';
                     else if (levelText.includes('HND II')) level = 'HND2';
-
                     openCourseModal({
                         code: cells[0].textContent.trim(),
                         name: cells[1].textContent.trim(),
@@ -2762,40 +2494,23 @@
             const credits = parseInt(document.getElementById('courseCredits').value);
             const semester = parseInt(document.getElementById('courseSemester').value);
             const editId = document.getElementById('courseEditId').value;
-
-            if (!code) {
-                showToast('Please enter a course code', 'warning');
-                return;
-            }
-
-            if (!name || !department || !level || !lecturer || !credits) {
-                showToast('Please fill all required fields', 'warning');
-                return;
-            }
-
+            if (!code) { showToast('Please enter a course code', 'warning'); return; }
+            if (!name || !department || !level || !lecturer || !credits) { showToast('Please fill all required fields',
+                    'warning'); return; }
             const validLevels = ['ND1', 'ND2', 'HND1', 'HND2'];
-            if (!validLevels.includes(level)) {
-                showToast('Invalid level. Must be ND1, ND2, HND1, or HND2', 'warning');
-                return;
-            }
-
+            if (!validLevels.includes(level)) { showToast('Invalid level. Must be ND1, ND2, HND1, or HND2',
+                'warning'); return; }
             if (editId && code !== editId) {
                 try {
                     const courses = await apiCall('/courses');
                     const exists = courses.some(c => c.code === code);
-                    if (exists) {
-                        showToast(`Course code "${code}" already exists. Please use a different code.`, 'warning');
-                        return;
-                    }
-                } catch (error) {
-                    console.warn('Could not check for duplicate course code:', error);
-                }
+                    if (exists) { showToast(`Course code "${code}" already exists. Please use a different code.`,
+                        'warning'); return; }
+                } catch (error) { console.warn('Could not check for duplicate course code:', error); }
             }
-
             const data = { code, name, department, level, lecturer, credits, semester };
             const url = editId ? `/courses/${editId}` : '/courses';
             const method = editId ? 'PUT' : 'POST';
-
             showLoading(true);
             try {
                 await apiCall(url, { method, body: JSON.stringify(data) });
@@ -2803,27 +2518,18 @@
                 bootstrap.Modal.getInstance(document.getElementById('courseModal')).hide();
                 loadCourses();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         async function deleteCourse(code) {
             if (!confirm(`Delete course ${code}?`)) return;
-
             showLoading(true);
             try {
                 await apiCall(`/courses/${code}`, { method: 'DELETE' });
                 showToast('Course deleted!', 'success');
                 loadCourses();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         // ========================================================
@@ -2832,15 +2538,12 @@
         async function loadHalls() {
             const body = document.getElementById('hallsBody');
             body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">Loading...</td></tr>';
-
             try {
                 const halls = await apiCall('/halls');
-
                 if (halls.length === 0) {
                     body.innerHTML = '<tr><td colspan="6" class="text-center text-muted">No halls found</td></tr>';
                     return;
                 }
-
                 body.innerHTML = halls.map(h => `
                         <tr>
                             <td><strong>${h.id}</strong></td>
@@ -2860,18 +2563,10 @@
                             </td>
                         </tr>
                     `).join('');
-
-                if ($.fn.DataTable.isDataTable('#hallsTable')) {
-                    $('#hallsTable').DataTable().destroy();
-                }
-                $('#hallsTable').DataTable({
-                    pageLength: 10,
-                    order: [
+                if ($.fn.DataTable.isDataTable('#hallsTable')) $('#hallsTable').DataTable().destroy();
+                $('#hallsTable').DataTable({ pageLength: 10, order: [
                         [0, 'asc']
-                    ],
-                    responsive: true
-                });
-
+                    ], responsive: true });
             } catch (error) {
                 body.innerHTML = `<tr><td colspan="6" class="text-center text-danger">${error.message}</td></tr>`;
             }
@@ -2881,7 +2576,6 @@
             document.getElementById('hallForm').reset();
             document.getElementById('hallEditId').value = '';
             document.getElementById('hallModalTitle').textContent = 'Add Hall';
-
             if (data) {
                 document.getElementById('hallEditId').value = data.id;
                 document.getElementById('hallId').value = data.id;
@@ -2896,7 +2590,6 @@
                 document.getElementById('hallId').value = newId;
                 document.getElementById('hallIdPreview').textContent = newId;
             }
-
             new bootstrap.Modal(document.getElementById('hallModal')).show();
         }
 
@@ -2924,16 +2617,10 @@
             const type = document.getElementById('hallType').value;
             const location = document.getElementById('hallLocation').value;
             const editId = document.getElementById('hallEditId').value;
-
-            if (!name || !capacity || !type) {
-                showToast('Please fill all required fields', 'warning');
-                return;
-            }
-
+            if (!name || !capacity || !type) { showToast('Please fill all required fields', 'warning'); return; }
             const data = { id, name, capacity, type, location };
             const url = editId ? `/halls/${editId}` : '/halls';
             const method = editId ? 'PUT' : 'POST';
-
             showLoading(true);
             try {
                 await apiCall(url, { method, body: JSON.stringify(data) });
@@ -2941,27 +2628,18 @@
                 bootstrap.Modal.getInstance(document.getElementById('hallModal')).hide();
                 loadHalls();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         async function deleteHall(id) {
             if (!confirm(`Delete hall ${id}?`)) return;
-
             showLoading(true);
             try {
                 await apiCall(`/halls/${id}`, { method: 'DELETE' });
                 showToast('Hall deleted!', 'success');
                 loadHalls();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         // ========================================================
@@ -2970,27 +2648,19 @@
         async function loadExams() {
             const body = document.getElementById('examsBody');
             body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>';
-
             try {
-                const [exams, courses, halls] = await Promise.all([
-                    apiCall('/exams'),
-                    apiCall('/courses'),
-                    apiCall('/halls')
-                ]);
-
+                const [exams, courses, halls] = await Promise.all([apiCall('/exams'), apiCall('/courses'), apiCall(
+                    '/halls')]);
                 const courseSelect = document.getElementById('examCourse');
                 courseSelect.innerHTML = '<option value="">Select Course</option>' +
                     courses.map(c => `<option value="${c.code}">${c.code} - ${c.name}</option>`).join('');
-
                 const hallSelect = document.getElementById('examHall');
                 hallSelect.innerHTML = '<option value="">Select Hall</option>' +
                     halls.map(h => `<option value="${h.id}">${h.name} (${h.type})</option>`).join('');
-
                 if (exams.length === 0) {
                     body.innerHTML = '<tr><td colspan="7" class="text-center text-muted">No exams scheduled</td></tr>';
                     return;
                 }
-
                 body.innerHTML = exams.map(e => `
                         <tr>
                             <td><strong>${e.id}</strong></td>
@@ -3011,18 +2681,10 @@
                             </td>
                         </tr>
                     `).join('');
-
-                if ($.fn.DataTable.isDataTable('#examsTable')) {
-                    $('#examsTable').DataTable().destroy();
-                }
-                $('#examsTable').DataTable({
-                    pageLength: 10,
-                    order: [
+                if ($.fn.DataTable.isDataTable('#examsTable')) $('#examsTable').DataTable().destroy();
+                $('#examsTable').DataTable({ pageLength: 10, order: [
                         [0, 'asc']
-                    ],
-                    responsive: true
-                });
-
+                    ], responsive: true });
             } catch (error) {
                 body.innerHTML = `<tr><td colspan="7" class="text-center text-danger">${error.message}</td></tr>`;
             }
@@ -3032,7 +2694,6 @@
             document.getElementById('examForm').reset();
             document.getElementById('examEditId').value = '';
             document.getElementById('examModalTitle').textContent = 'Add Exam';
-
             if (data) {
                 document.getElementById('examEditId').value = data.id;
                 document.getElementById('examId').value = data.id;
@@ -3048,7 +2709,6 @@
                 document.getElementById('examId').value = newId;
                 document.getElementById('examIdPreview').textContent = newId;
             }
-
             new bootstrap.Modal(document.getElementById('examModal')).show();
         }
 
@@ -3078,16 +2738,10 @@
             const hall = document.getElementById('examHall').value;
             const duration = document.getElementById('examDuration').value;
             const editId = document.getElementById('examEditId').value;
-
-            if (!course || !date || !time || !hall) {
-                showToast('Please fill all required fields', 'warning');
-                return;
-            }
-
+            if (!course || !date || !time || !hall) { showToast('Please fill all required fields', 'warning'); return; }
             const data = { id, course, date, time, hall, duration };
             const url = editId ? `/exams/${editId}` : '/exams';
             const method = editId ? 'PUT' : 'POST';
-
             showLoading(true);
             try {
                 await apiCall(url, { method, body: JSON.stringify(data) });
@@ -3095,47 +2749,33 @@
                 bootstrap.Modal.getInstance(document.getElementById('examModal')).hide();
                 loadExams();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         async function deleteExam(id) {
             if (!confirm(`Delete exam ${id}?`)) return;
-
             showLoading(true);
             try {
                 await apiCall(`/exams/${id}`, { method: 'DELETE' });
                 showToast('Exam deleted!', 'success');
                 loadExams();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         async function generateExams() {
             if (!confirm('Generate exam schedule automatically?')) return;
-
             showLoading(true);
             try {
                 await apiCall('/exams/generate', { method: 'POST' });
                 showToast('✅ Exam schedule generated!', 'success');
                 loadExams();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
-            }
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
         // ========================================================
-        // CLASS TIMETABLE
+        // CLASS TIMETABLE WITH EXPORT
         // ========================================================
         async function loadTimetable() {
             const display = document.getElementById('timetableDisplay');
@@ -3145,8 +2785,12 @@
                 const data = await apiCall('/timetable/latest');
 
                 if (!data.schedule || data.schedule.length === 0) {
-                    display.innerHTML =
-                        '<p class="text-muted text-center py-4">No timetable generated. Click "Generate" to create one.</p>';
+                    display.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-calendar-times"></i>
+                                <p>No timetable generated. Click "Generate" to create one.</p>
+                            </div>
+                        `;
                     return;
                 }
 
@@ -3158,13 +2802,29 @@
                 }, {});
 
                 let html = `
-                        <div class="mb-3">
-                            <span class="badge bg-success">Fitness Score: ${data.fitness_score || 0}</span>
-                            <span class="badge bg-info ms-2">${data.schedule.length} sessions</span>
-                            <small class="text-muted ms-2">Generated: ${data.generated_at || 'N/A'}</small>
+                        <div class="mb-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <span class="badge bg-success">Fitness Score: ${data.fitness_score || 0}</span>
+                                <span class="badge bg-info ms-2">${data.schedule.length} sessions</span>
+                                <small class="text-muted ms-2">Generated: ${data.generated_at || 'N/A'}</small>
+                            </div>
+                            <div class="btn-group">
+                                <button class="btn btn-sm btn-outline-primary" onclick="exportTimetable('pdf')">
+                                    <i class="fas fa-file-pdf"></i> PDF
+                                </button>
+                                <button class="btn btn-sm btn-outline-success" onclick="exportTimetable('excel')">
+                                    <i class="fas fa-file-excel"></i> Excel
+                                </button>
+                                <button class="btn btn-sm btn-outline-secondary" onclick="exportTimetable('csv')">
+                                    <i class="fas fa-file-csv"></i> CSV
+                                </button>
+                                <button class="btn btn-sm btn-outline-dark" onclick="printTimetable()">
+                                    <i class="fas fa-print"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="table-responsive">
-                            <table class="table table-hover">
+                            <table class="table table-hover" id="timetableTable">
                                 <thead>
                                     <tr>
                                         <th>Day</th>
@@ -3205,8 +2865,12 @@
 
             } catch (error) {
                 if (error.message.includes('404')) {
-                    display.innerHTML =
-                        '<p class="text-muted text-center py-4">No timetable generated. Click "Generate" to create one.</p>';
+                    display.innerHTML = `
+                            <div class="empty-state">
+                                <i class="fas fa-calendar-times"></i>
+                                <p>No timetable generated. Click "Generate" to create one.</p>
+                            </div>
+                        `;
                 } else {
                     display.innerHTML = `<p class="text-danger text-center py-4">${error.message}</p>`;
                 }
@@ -3241,18 +2905,236 @@
 
         async function clearTimetable() {
             if (!confirm('Delete all timetables?')) return;
-
             showLoading(true);
             try {
                 await apiCall('/timetable', { method: 'DELETE' });
                 showToast('Timetables cleared!', 'success');
                 loadTimetable();
                 loadDashboard();
-            } catch (error) {
-                showToast('❌ ' + error.message, 'danger');
-            } finally {
-                showLoading(false);
+            } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
+        }
+
+        // ========================================================
+        // TIMETABLE EXPORT FUNCTIONS
+        // ========================================================
+        function getTimetableData() {
+            const display = document.getElementById('timetableDisplay');
+            const rows = display.querySelectorAll('#timetableTable tbody tr');
+            const data = [];
+            rows.forEach(row => {
+                const cells = row.querySelectorAll('td');
+                if (cells.length >= 5) {
+                    data.push({
+                        day: cells[0].textContent.trim(),
+                        time: cells[1].textContent.trim(),
+                        course: cells[2].textContent.trim(),
+                        lecturer: cells[3].textContent.trim(),
+                        venue: cells[4].textContent.trim()
+                    });
+                }
+            });
+            return data;
+        }
+
+        function exportTimetable(format) {
+            const data = getTimetableData();
+            if (!data || data.length === 0) {
+                showToast('No timetable data to export. Please generate a timetable first.', 'warning');
+                return;
             }
+            switch (format) {
+                case 'pdf':
+                    exportToPDF(data);
+                    break;
+                case 'excel':
+                    exportToExcel(data);
+                    break;
+                case 'csv':
+                    exportToCSV(data);
+                    break;
+                default:
+                    showToast('Invalid export format', 'danger');
+            }
+        }
+
+        function exportToPDF(data) {
+            if (typeof window.jspdf === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                document.head.appendChild(script);
+                const script2 = document.createElement('script');
+                script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
+                document.head.appendChild(script2);
+                script.onload = () => { setTimeout(() => generatePDF(data), 500); };
+                showToast('Loading PDF library...', 'info');
+                return;
+            }
+            generatePDF(data);
+        }
+
+        function generatePDF(data) {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF('landscape', 'mm', 'a4');
+                doc.setFontSize(18);
+                doc.setTextColor(26, 58, 92);
+                doc.text('The Polytechnic, Ibadan', 14, 20);
+                doc.setFontSize(14);
+                doc.text('Class Timetable', 14, 30);
+                doc.setFontSize(10);
+                doc.setTextColor(100);
+                doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 37);
+                const tableData = data.map(item => [item.day, item.time, item.course, item.lecturer, item.venue]);
+                doc.autoTable({
+                    startY: 45,
+                    head: [
+                        ['Day', 'Time', 'Course', 'Lecturer', 'Venue']
+                    ],
+                    body: tableData,
+                    theme: 'striped',
+                    headStyles: { fillColor: [26, 58, 92], textColor: [255, 255, 255], fontSize: 10,
+                        fontStyle: 'bold' },
+                    styles: { fontSize: 9, cellPadding: 3 },
+                    columnStyles: { 0: { cellWidth: 30 }, 1: { cellWidth: 25 }, 2: { cellWidth: 50 },
+                    3: { cellWidth: 45 }, 4: { cellWidth: 30 } }
+                });
+                const pageCount = doc.internal.getNumberOfPages();
+                for (let i = 1; i <= pageCount; i++) {
+                    doc.setPage(i);
+                    doc.setFontSize(8);
+                    doc.setTextColor(150);
+                    doc.text(
+                        `Page ${i} of ${pageCount} - The Polytechnic Ibadan Timetable`,
+                        doc.internal.pageSize.getWidth() / 2,
+                        doc.internal.pageSize.getHeight() - 5, { align: 'center' }
+                    );
+                }
+                doc.save('timetable.pdf');
+                showToast('✅ PDF exported successfully!', 'success');
+            } catch (error) {
+                console.error('PDF export error:', error);
+                showToast('Error exporting PDF: ' + error.message, 'danger');
+            }
+        }
+
+        function exportToExcel(data) {
+            if (typeof XLSX === 'undefined') {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+                document.head.appendChild(script);
+                script.onload = () => { setTimeout(() => generateExcel(data), 500); };
+                showToast('Loading Excel library...', 'info');
+                return;
+            }
+            generateExcel(data);
+        }
+
+        function generateExcel(data) {
+            try {
+                const excelData = [
+                    ['The Polytechnic, Ibadan'],
+                    ['Class Timetable'],
+                    [`Generated: ${new Date().toLocaleString()}`],
+                    [],
+                    ['Day', 'Time', 'Course', 'Lecturer', 'Venue']
+                ];
+                data.forEach(item => {
+                    excelData.push([item.day, item.time, item.course, item.lecturer, item.venue]);
+                });
+                excelData.push([]);
+                excelData.push(['Total Sessions:', data.length]);
+                excelData.push(['Generated By:', document.getElementById('adminUsername').textContent || 'Admin']);
+                const wb = XLSX.utils.book_new();
+                const ws = XLSX.utils.aoa_to_sheet(excelData);
+                ws['!cols'] = [{ wch: 15 }, { wch: 15 }, { wch: 30 }, { wch: 25 }, { wch: 20 }];
+                ws['!merges'] = [
+                    { s: { r: 0, c: 0 }, e: { r: 0, c: 4 } },
+                    { s: { r: 1, c: 0 }, e: { r: 1, c: 4 } },
+                    { s: { r: 2, c: 0 }, e: { r: 2, c: 4 } }
+                ];
+                XLSX.utils.book_append_sheet(wb, ws, 'Timetable');
+                XLSX.writeFile(wb, 'timetable.xlsx');
+                showToast('✅ Excel exported successfully!', 'success');
+            } catch (error) {
+                console.error('Excel export error:', error);
+                showToast('Error exporting Excel: ' + error.message, 'danger');
+            }
+        }
+
+        function exportToCSV(data) {
+            try {
+                let csv = 'The Polytechnic, Ibadan\n';
+                csv += 'Class Timetable\n';
+                csv += `Generated: ${new Date().toLocaleString()}\n\n`;
+                csv += 'Day,Time,Course,Lecturer,Venue\n';
+                data.forEach(item => {
+                    csv += `${item.day},${item.time},"${item.course}","${item.lecturer}",${item.venue}\n`;
+                });
+                csv += `\nTotal Sessions: ${data.length}\n`;
+                csv += `Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}`;
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'timetable.csv';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                URL.revokeObjectURL(link.href);
+                showToast('✅ CSV exported successfully!', 'success');
+            } catch (error) {
+                console.error('CSV export error:', error);
+                showToast('Error exporting CSV: ' + error.message, 'danger');
+            }
+        }
+
+        function printTimetable() {
+            const printWindow = window.open('', '_blank');
+            const timetableContent = document.getElementById('timetableDisplay').innerHTML;
+
+            printWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Timetable - The Polytechnic Ibadan</title>
+                        <style>
+                            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; color: #333; }
+                            .header { text-align: center; margin-bottom: 30px; border-bottom: 3px solid #1a3a5c; padding-bottom: 20px; }
+                            .header h1 { color: #1a3a5c; margin: 0; font-size: 24px; }
+                            .header h2 { color: #e6b31e; margin: 5px 0; font-size: 18px; }
+                            .header p { color: #666; margin: 5px 0; font-size: 12px; }
+                            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                            th { background: #1a3a5c; color: white; padding: 10px 12px; text-align: left; font-size: 13px; }
+                            td { padding: 8px 12px; border-bottom: 1px solid #ddd; font-size: 12px; }
+                            tr:nth-child(even) { background: #f9f9f9; }
+                            .footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; font-size: 11px; color: #999; }
+                            .print-btn { display: none; }
+                            @media print { .no-print { display: none; } body { padding: 20px; } }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="no-print" style="text-align:center; margin-bottom:20px;">
+                            <button onclick="window.print()" style="padding:10px 30px; background:#1a3a5c; color:white; border:none; border-radius:5px; cursor:pointer; font-size:16px;">
+                                <i class="fas fa-print"></i> Print Timetable
+                            </button>
+                            <button onclick="window.close()" style="padding:10px 30px; background:#dc3545; color:white; border:none; border-radius:5px; cursor:pointer; font-size:16px; margin-left:10px;">
+                                Close
+                            </button>
+                        </div>
+                        <div class="header">
+                            <h1>The Polytechnic, Ibadan</h1>
+                            <h2>Class Timetable</h2>
+                            <p>Generated: ${new Date().toLocaleString()}</p>
+                            <p>Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}</p>
+                        </div>
+                        ${timetableContent}
+                        <div class="footer">
+                            <p>This is a system-generated timetable. For any discrepancies, please contact the admin.</p>
+                            <p>&copy; ${new Date().getFullYear()} The Polytechnic, Ibadan. All rights reserved.</p>
+                        </div>
+                    </body>
+                    </html>
+                `);
+            printWindow.document.close();
         }
     </script>
 </body>

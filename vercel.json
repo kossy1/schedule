@@ -23,6 +23,10 @@
     {
       "src": "frontend/lecturer.html",
       "use": "@vercel/static"
+    },
+    {
+      "src": "frontend/export.html",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -41,6 +45,10 @@
     {
       "src": "/lecturer",
       "dest": "frontend/lecturer.html"
+    },
+    {
+      "src": "/export",
+      "dest": "frontend/export.html"
     },
     {
       "src": "/",
