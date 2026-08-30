@@ -3059,191 +3059,302 @@
             } catch (error) { showToast('❌ ' + error.message, 'danger'); } finally { showLoading(false); }
         }
 
-        // ========================================================
-        // TIMETABLE EXPORT FUNCTIONS
-        // ========================================================
-        function getTimetableData() {
-            const display = document.getElementById('timetableDisplay');
-            const rows = display.querySelectorAll('#timetableTable tbody tr');
-            const data = [];
-            rows.forEach(row => {
-                const cells = row.querySelectorAll('td');
-                if (cells.length >= 7) {
-                    data.push({
-                        day: cells[0].textContent.trim(),
-                        time: cells[1].textContent.trim(),
-                        course: cells[2].textContent.trim(),
-                        level: cells[3].textContent.trim(),
-                        lecturer: cells[4].textContent.trim(),
-                        venue: cells[5].textContent.trim(),
-                        duration: cells[6].textContent.trim()
-                    });
-                }
+       // ========================================================
+// TIMETABLE EXPORT FUNCTIONS - ALL ENTITIES INCLUDED
+// ========================================================
+
+function getTimetableData() {
+    const display = document.getElementById('timetableDisplay');
+    const rows = display.querySelectorAll('#timetableTable tbody tr');
+    const data = [];
+    rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length >= 7) {
+            data.push({
+                day: cells[0].textContent.trim(),
+                time: cells[1].textContent.trim(),
+                course_code: cells[2].textContent.trim(),
+                course_name: cells[2].textContent.trim(),
+                level: cells[3].textContent.trim(),
+                lecturer: cells[4].textContent.trim(),
+                venue: cells[5].textContent.trim(),
+                duration: cells[6].textContent.trim()
             });
-            return data;
         }
+    });
+    return data;
+}
 
-        function exportTimetable(format) {
-            const data = getTimetableData();
-            if (!data || data.length === 0) {
-                showToast('No timetable data to export. Please generate a timetable first.', 'warning');
-                return;
-            }
-            switch (format) {
-                case 'pdf':
-                    exportToPDF(data);
-                    break;
-                case 'excel':
-                    exportToExcel(data);
-                    break;
-                case 'csv':
-                    exportToCSV(data);
-                    break;
-                default:
-                    showToast('Invalid export format', 'danger');
-            }
-        }
+function exportTimetable(format) {
+    const data = getTimetableData();
+    if (!data || data.length === 0) {
+        showToast('No timetable data to export. Please generate a timetable first.', 'warning');
+        return;
+    }
+    switch (format) {
+        case 'pdf':
+            exportToPDF(data);
+            break;
+        case 'excel':
+            exportToExcel(data);
+            break;
+        case 'csv':
+            exportToCSV(data);
+            break;
+        default:
+            showToast('Invalid export format', 'danger');
+    }
+}
 
-        function exportToPDF(data) {
-            if (typeof window.jspdf === 'undefined') {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-                document.head.appendChild(script);
+function exportToPDF(data) {
+    try {
+        // Load jsPDF dynamically
+        if (typeof window.jspdf === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            document.head.appendChild(script);
+            
+            script.onload = function() {
+                // Load autoTable plugin
                 const script2 = document.createElement('script');
                 script2.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js';
                 document.head.appendChild(script2);
-                script.onload = () => { setTimeout(() => generatePDF(data), 500); };
-                showToast('Loading PDF library...', 'info');
-                return;
-            }
-            generatePDF(data);
+                script2.onload = function() {
+                    generatePDF(data);
+                };
+            };
+            showToast('Loading PDF library...', 'info');
+            return;
         }
+        generatePDF(data);
+    } catch (error) {
+        console.error('PDF export error:', error);
+        showToast('Error exporting PDF: ' + error.message, 'danger');
+    }
+}
 
-        function generatePDF(data) {
-            try {
-                const { jsPDF } = window.jspdf;
-                const doc = new jsPDF('landscape', 'mm', 'a4');
-                const semester = document.getElementById('semesterSelect').value;
-                doc.setFontSize(18);
-                doc.setTextColor(26, 58, 92);
-                doc.text('The Polytechnic, Ibadan', 14, 20);
-                doc.setFontSize(14);
-                doc.text(`Class Timetable - Semester ${semester} (2-Hour Sessions)`, 14, 30);
-                doc.setFontSize(10);
-                doc.setTextColor(100);
-                doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 37);
-                const tableData = data.map(item => [item.day, item.time, item.course, item.level, item.lecturer, item.venue, item.duration]);
-                doc.autoTable({
-                    startY: 45,
-                    head: [['Day', 'Time', 'Course', 'Level', 'Lecturer', 'Venue', 'Duration']],
-                    body: tableData,
-                    theme: 'striped',
-                    headStyles: { fillColor: [26, 58, 92], textColor: [255, 255, 255], fontSize: 10, fontStyle: 'bold' },
-                    styles: { fontSize: 9, cellPadding: 3 },
-                    columnStyles: { 
-                        0: { cellWidth: 22 }, 
-                        1: { cellWidth: 25 }, 
-                        2: { cellWidth: 35 }, 
-                        3: { cellWidth: 20 },
-                        4: { cellWidth: 30 }, 
-                        5: { cellWidth: 22 }, 
-                        6: { cellWidth: 18 } 
-                    }
-                });
-                const pageCount = doc.internal.getNumberOfPages();
-                for (let i = 1; i <= pageCount; i++) {
-                    doc.setPage(i);
-                    doc.setFontSize(8);
-                    doc.setTextColor(150);
-                    doc.text(
-                        `Page ${i} of ${pageCount} - The Polytechnic Ibadan Timetable - Semester ${semester}`,
-                        doc.internal.pageSize.getWidth() / 2,
-                        doc.internal.pageSize.getHeight() - 5, { align: 'center' }
-                    );
+function generatePDF(data) {
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('landscape', 'mm', 'a4');
+        const semester = document.getElementById('semesterSelect').value;
+        
+        // Header
+        doc.setFontSize(18);
+        doc.setTextColor(26, 58, 92);
+        doc.text('The Polytechnic, Ibadan', 14, 20);
+        doc.setFontSize(14);
+        doc.text(`Class Timetable - Semester ${semester} (2-Hour Sessions)`, 14, 30);
+        doc.setFontSize(10);
+        doc.setTextColor(100);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 37);
+        doc.text(`Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}`, 14, 43);
+        doc.text(`Total Sessions: ${data.length}`, 14, 49);
+        
+        // Table data - ALL ENTITIES INCLUDED
+        const tableData = data.map(item => [
+            item.day,
+            item.time,
+            item.course_code,
+            item.level,
+            item.lecturer,
+            item.venue,
+            item.duration
+        ]);
+        
+        // Use autoTable with proper check
+        if (typeof doc.autoTable === 'function') {
+            doc.autoTable({
+                startY: 55,
+                head: [['Day', 'Time', 'Course Code', 'Level', 'Lecturer', 'Venue', 'Duration']],
+                body: tableData,
+                theme: 'striped',
+                headStyles: {
+                    fillColor: [26, 58, 92],
+                    textColor: [255, 255, 255],
+                    fontSize: 10,
+                    fontStyle: 'bold'
+                },
+                styles: {
+                    fontSize: 9,
+                    cellPadding: 3
+                },
+                columnStyles: {
+                    0: { cellWidth: 22 },
+                    1: { cellWidth: 25 },
+                    2: { cellWidth: 30 },
+                    3: { cellWidth: 20 },
+                    4: { cellWidth: 30 },
+                    5: { cellWidth: 25 },
+                    6: { cellWidth: 18 }
                 }
-                doc.save(`timetable_semester_${semester}.pdf`);
-                showToast('✅ PDF exported successfully!', 'success');
-            } catch (error) {
-                console.error('PDF export error:', error);
-                showToast('Error exporting PDF: ' + error.message, 'danger');
-            }
-        }
-
-        function exportToExcel(data) {
-            if (typeof XLSX === 'undefined') {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
-                document.head.appendChild(script);
-                script.onload = () => { setTimeout(() => generateExcel(data), 500); };
-                showToast('Loading Excel library...', 'info');
-                return;
-            }
-            generateExcel(data);
-        }
-
-        function generateExcel(data) {
-            try {
-                const semester = document.getElementById('semesterSelect').value;
-                const excelData = [
-                    ['The Polytechnic, Ibadan'],
-                    [`Class Timetable - Semester ${semester} (2-Hour Sessions)`],
-                    [`Generated: ${new Date().toLocaleString()}`],
-                    [],
-                    ['Day', 'Time', 'Course', 'Level', 'Lecturer', 'Venue', 'Duration']
-                ];
-                data.forEach(item => {
-                    excelData.push([item.day, item.time, item.course, item.level, item.lecturer, item.venue, item.duration]);
+            });
+        } else {
+            // Fallback: Simple table without autoTable
+            let y = 55;
+            doc.setFontSize(10);
+            doc.setTextColor(0);
+            // Headers
+            const headers = ['Day', 'Time', 'Course Code', 'Level', 'Lecturer', 'Venue', 'Duration'];
+            headers.forEach((h, i) => {
+                doc.text(h, 14 + (i * 35), y);
+            });
+            y += 10;
+            // Data
+            data.forEach(item => {
+                const row = [item.day, item.time, item.course_code, item.level, item.lecturer, item.venue, item.duration];
+                row.forEach((r, i) => {
+                    doc.text(String(r), 14 + (i * 35), y);
                 });
-                excelData.push([]);
-                excelData.push(['Total Sessions:', data.length]);
-                excelData.push(['Session Duration:', '2 hours']);
-                excelData.push(['Semester:', semester]);
-                excelData.push(['Generated By:', document.getElementById('adminUsername').textContent || 'Admin']);
-                const wb = XLSX.utils.book_new();
-                const ws = XLSX.utils.aoa_to_sheet(excelData);
-                ws['!cols'] = [{ wch: 15 }, { wch: 20 }, { wch: 30 }, { wch: 15 }, { wch: 25 }, { wch: 20 }, { wch: 15 }];
-                ws['!merges'] = [
-                    { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
-                    { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
-                    { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } }
-                ];
-                XLSX.utils.book_append_sheet(wb, ws, `Semester_${semester}`);
-                XLSX.writeFile(wb, `timetable_semester_${semester}.xlsx`);
-                showToast('✅ Excel exported successfully!', 'success');
-            } catch (error) {
-                console.error('Excel export error:', error);
-                showToast('Error exporting Excel: ' + error.message, 'danger');
-            }
+                y += 8;
+                if (y > 180) {
+                    doc.addPage();
+                    y = 20;
+                }
+            });
         }
+        
+        // Footer
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(
+                `Page ${i} of ${pageCount} - The Polytechnic Ibadan Timetable - Semester ${semester}`,
+                doc.internal.pageSize.getWidth() / 2,
+                doc.internal.pageSize.getHeight() - 5,
+                { align: 'center' }
+            );
+        }
+        
+        doc.save(`timetable_semester_${semester}.pdf`);
+        showToast('✅ PDF exported successfully!', 'success');
+    } catch (error) {
+        console.error('PDF generation error:', error);
+        showToast('Error generating PDF: ' + error.message, 'danger');
+    }
+}
 
-        function exportToCSV(data) {
-            try {
-                const semester = document.getElementById('semesterSelect').value;
-                let csv = 'The Polytechnic, Ibadan\n';
-                csv += `Class Timetable - Semester ${semester} (2-Hour Sessions)\n`;
-                csv += `Generated: ${new Date().toLocaleString()}\n\n`;
-                csv += 'Day,Time,Course,Level,Lecturer,Venue,Duration\n';
-                data.forEach(item => {
-                    csv += `${item.day},${item.time},"${item.course}",${item.level},"${item.lecturer}",${item.venue},${item.duration}\n`;
-                });
-                csv += `\nTotal Sessions: ${data.length}\n`;
-                csv += `Session Duration: 2 hours\n`;
-                csv += `Semester: ${semester}\n`;
-                csv += `Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}`;
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `timetable_semester_${semester}.csv`;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                URL.revokeObjectURL(link.href);
-                showToast('✅ CSV exported successfully!', 'success');
-            } catch (error) {
-                console.error('CSV export error:', error);
-                showToast('Error exporting CSV: ' + error.message, 'danger');
-            }
+function exportToExcel(data) {
+    try {
+        if (typeof XLSX === 'undefined') {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            document.head.appendChild(script);
+            script.onload = function() {
+                generateExcel(data);
+            };
+            showToast('Loading Excel library...', 'info');
+            return;
         }
+        generateExcel(data);
+    } catch (error) {
+        console.error('Excel export error:', error);
+        showToast('Error exporting Excel: ' + error.message, 'danger');
+    }
+}
+
+function generateExcel(data) {
+    try {
+        const semester = document.getElementById('semesterSelect').value;
+        
+        // ALL ENTITIES INCLUDED
+        const excelData = [
+            ['The Polytechnic, Ibadan'],
+            [`Class Timetable - Semester ${semester} (2-Hour Sessions)`],
+            [`Generated: ${new Date().toLocaleString()}`],
+            [`Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}`],
+            [`Total Sessions: ${data.length}`],
+            [],
+            ['Day', 'Time', 'Course Code', 'Level', 'Lecturer', 'Venue', 'Duration']
+        ];
+        
+        data.forEach(item => {
+            excelData.push([
+                item.day,
+                item.time,
+                item.course_code,
+                item.level,
+                item.lecturer,
+                item.venue,
+                item.duration
+            ]);
+        });
+        
+        excelData.push([]);
+        excelData.push(['Summary']);
+        excelData.push(['Semester:', semester]);
+        excelData.push(['Session Duration:', '2 hours']);
+        excelData.push(['Total Sessions:', data.length]);
+        
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.aoa_to_sheet(excelData);
+        
+        // Set column widths
+        ws['!cols'] = [
+            { wch: 15 },
+            { wch: 20 },
+            { wch: 25 },
+            { wch: 15 },
+            { wch: 25 },
+            { wch: 20 },
+            { wch: 15 }
+        ];
+        
+        // Merge title cells
+        ws['!merges'] = [
+            { s: { r: 0, c: 0 }, e: { r: 0, c: 6 } },
+            { s: { r: 1, c: 0 }, e: { r: 1, c: 6 } },
+            { s: { r: 2, c: 0 }, e: { r: 2, c: 6 } },
+            { s: { r: 3, c: 0 }, e: { r: 3, c: 6 } },
+            { s: { r: 4, c: 0 }, e: { r: 4, c: 6 } }
+        ];
+        
+        XLSX.utils.book_append_sheet(wb, ws, `Semester_${semester}`);
+        XLSX.writeFile(wb, `timetable_semester_${semester}.xlsx`);
+        showToast('✅ Excel exported successfully!', 'success');
+    } catch (error) {
+        console.error('Excel generation error:', error);
+        showToast('Error generating Excel: ' + error.message, 'danger');
+    }
+}
+
+function exportToCSV(data) {
+    try {
+        const semester = document.getElementById('semesterSelect').value;
+        
+        // ALL ENTITIES INCLUDED
+        let csv = 'The Polytechnic, Ibadan\n';
+        csv += `Class Timetable - Semester ${semester} (2-Hour Sessions)\n`;
+        csv += `Generated: ${new Date().toLocaleString()}\n`;
+        csv += `Generated By: ${document.getElementById('adminUsername').textContent || 'Admin'}\n`;
+        csv += `Total Sessions: ${data.length}\n\n`;
+        csv += 'Day,Time,Course Code,Level,Lecturer,Venue,Duration\n';
+        
+        data.forEach(item => {
+            csv += `${item.day},${item.time},"${item.course_code}",${item.level},"${item.lecturer}",${item.venue},${item.duration}\n`;
+        });
+        
+        csv += `\nSummary\n`;
+        csv += `Semester: ${semester}\n`;
+        csv += `Session Duration: 2 hours\n`;
+        csv += `Total Sessions: ${data.length}\n`;
+        
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `timetable_semester_${semester}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(link.href);
+        showToast('✅ CSV exported successfully!', 'success');
+    } catch (error) {
+        console.error('CSV export error:', error);
+        showToast('Error exporting CSV: ' + error.message, 'danger');
+    }
+}
 
         function printTimetable() {
             const printWindow = window.open('', '_blank');

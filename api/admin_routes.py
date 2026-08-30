@@ -118,11 +118,9 @@ def get_stats(payload):
             'timetables': db.timetables.count_documents({}),
             'users': db.users.count_documents({})
         }
-        print(f"📊 Stats: {stats}")
         return jsonify(stats), 200
     except Exception as e:
         print(f"❌ Stats error: {e}")
-        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
@@ -535,7 +533,7 @@ def lecturer_login():
 # LECTURER TIMETABLE VIEW
 # ============================================================
 
-@admin_bp.route('/timetable/lecturer/<staff_id>', methods=['GET'])
+@admin_bp.route('/timetable/lecturer/<staff_id>', methods(['GET'])
 def get_lecturer_timetable(staff_id):
     """Get timetable for a specific lecturer by staff ID."""
     try:
@@ -573,7 +571,7 @@ def get_lecturer_timetable(staff_id):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# COURSES CRUD - FIXED SYNTAX ERROR
+# COURSES CRUD
 # ============================================================
 
 @admin_bp.route('/courses', methods=['GET'])
@@ -876,9 +874,11 @@ def generate_exam_schedule(payload):
             exam_slots.append({
                 'id': f'EXAM{idx+1:03d}',
                 'course': course.get('code', course.get('id', f'COURSE{idx+1}')),
+                'course_name': course.get('name', ''),
                 'date': day,
                 'time': time,
                 'hall': hall['id'],
+                'hall_name': hall['name'],
                 'duration': '2 hours'
             })
             idx += 1
@@ -896,7 +896,7 @@ def generate_exam_schedule(payload):
         return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# CLASS TIMETABLE WITH LEVEL
+# CLASS TIMETABLE WITH COURSE NAME
 # ============================================================
 
 @admin_bp.route('/timetable/latest', methods=['GET'])
@@ -940,7 +940,7 @@ def get_timetable_by_semester(payload, semester):
 @admin_bp.route('/timetable/generate', methods=['POST'])
 @token_required
 def generate_timetable(payload):
-    """Generate class timetable for a specific semester with 2-hour slots and level."""
+    """Generate class timetable for a specific semester with 2-hour slots and course name."""
     try:
         data = request.json or {}
         
@@ -974,7 +974,7 @@ def generate_timetable(payload):
             '4:00 - 6:00'
         ])
         
-        # Convert courses to format expected by scheduler
+        # Convert courses to format expected by scheduler with course name
         course_data = []
         for idx, c in enumerate(courses):
             try:
@@ -1018,14 +1018,14 @@ def generate_timetable(payload):
         if course_data:
             print(f"📋 First course: {course_data[0]}")
         
-        # Generate timetable with 2-hour slots
+        # Generate timetable with 2-hour slots and course name
         best_schedule = generate_simple_timetable(course_data, room_names, days, slots)
         fitness = calculate_fitness(best_schedule)
         
         print(f"✅ Schedule generated with fitness score: {fitness}")
         print(f"📊 Generated {len(best_schedule)} sessions (2 hours each) for Semester {semester}")
         
-        # Save timetable with semester
+        # Save timetable with semester and course name
         timetable_data = {
             'schedule': best_schedule,
             'fitness_score': fitness,
@@ -1054,7 +1054,7 @@ def generate_timetable(payload):
         return jsonify({'error': f'Failed to generate timetable: {str(e)}'}), 500
 
 def generate_simple_timetable(courses, rooms, days, slots):
-    """Simple timetable generation with 2-hour slots and level."""
+    """Simple timetable generation with 2-hour slots, course name, and all entities."""
     schedule = []
     for i, course in enumerate(courses):
         day_idx = i % len(days)
@@ -1062,7 +1062,8 @@ def generate_simple_timetable(courses, rooms, days, slots):
         room_idx = (i + slot_idx) % len(rooms)
         
         schedule.append({
-            "course": course.get("id", f"COURSE_{i+1}"),
+            "course_code": course.get("id", f"COURSE_{i+1}"),
+            "course": course.get("name", f"Course {i+1}"),
             "course_name": course.get("name", f"Course {i+1}"),
             "lecturer": course.get("lecturer", "Unknown"),
             "department": course.get("department", ""),
