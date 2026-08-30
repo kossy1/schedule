@@ -10,6 +10,8 @@ class GeneticScheduler:
         self.population_size = 50
         self.generations = 100
         self.mutation_rate = 0.1
+        
+        print(f"🧬 GeneticScheduler initialized with {len(courses)} courses, {len(rooms)} rooms")
 
     def create_individual(self) -> List[Dict]:
         """Create a random schedule (one individual)."""
@@ -73,8 +75,11 @@ class GeneticScheduler:
 
     def evolve(self) -> Tuple[List[Dict], float]:
         """Run the genetic algorithm to find optimal schedule."""
+        print(f"🧬 Starting evolution with {self.population_size} population, {self.generations} generations")
+        
         # Initialize population
         population = [self.create_individual() for _ in range(self.population_size)]
+        print(f"✅ Population initialized with {len(population)} individuals")
         
         for generation in range(self.generations):
             # Calculate fitness for all individuals
@@ -102,8 +107,15 @@ class GeneticScheduler:
                     new_population.append(self.create_individual())
             
             population = new_population
+            
+            # Print progress every 10 generations
+            if (generation + 1) % 10 == 0:
+                best_fitness = max(fitness_scores)
+                avg_fitness = sum(fitness_scores) / len(fitness_scores)
+                print(f"📊 Generation {generation + 1}/{self.generations} - Best: {best_fitness:.2f}, Avg: {avg_fitness:.2f}")
         
         # Return best individual
         final_fitness = [self.fitness(ind) for ind in population]
         best_idx = final_fitness.index(max(final_fitness))
+        print(f"✅ Evolution complete. Best fitness: {final_fitness[best_idx]:.2f}")
         return population[best_idx], final_fitness[best_idx]

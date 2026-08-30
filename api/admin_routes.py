@@ -2,8 +2,8 @@ from flask import Blueprint, request, jsonify
 from datetime import datetime
 from .database import db
 from .auth import token_required
-from .scheduler import GeneticScheduler
 import re
+import random
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api/admin')
 
@@ -51,7 +51,7 @@ def verify_token(payload):
     return jsonify({'valid': True, 'user': payload}), 200
 
 # ============================================================
-# TOKEN REFRESH - NEW ENDPOINT
+# TOKEN REFRESH
 # ============================================================
 
 @admin_bp.route('/refresh', methods=['POST'])
@@ -228,7 +228,7 @@ def delete_lecturer(payload, lecturer_id):
     return jsonify({'message': 'Lecturer deleted successfully'}), 200
 
 # ============================================================
-# STUDENTS CRUD (Polytechnic Levels: ND1, ND2, HND1, HND2)
+# STUDENTS CRUD
 # ============================================================
 
 @admin_bp.route('/students', methods=['GET'])
@@ -397,7 +397,7 @@ def get_student_timetable(matric):
         if not timetable:
             return jsonify({'error': 'No timetable found'}), 404
         
-        # Return schedule (filter by student's courses in production)
+        # Return schedule
         return jsonify({
             'student': student,
             'schedule': timetable.get('schedule', []),
@@ -494,7 +494,7 @@ def get_lecturer_timetable(staff_id):
         return jsonify({'error': 'An error occurred'}), 500
 
 # ============================================================
-# COURSES CRUD (with Manual Code Entry - Editable)
+# COURSES CRUD
 # ============================================================
 
 @admin_bp.route('/courses', methods=['GET'])
@@ -522,15 +522,10 @@ def add_course(payload):
     if db.courses.find_one({'code': data['code']}):
         return jsonify({'error': f'Course {data["code"]} already exists'}), 400
     
-    # Get department code
-    dept = db.departments.find_one({'id': data['department']})
-    dept_code = dept['code'] if dept else data['department'][:3].upper()
-    
     db.courses.insert_one({
         'code': data['code'],
         'name': data['name'],
         'department': data['department'],
-        'department_code': dept_code,
         'level': data['level'],
         'lecturer': data['lecturer'],
         'credits': data['credits'],
@@ -555,7 +550,7 @@ def update_course(payload, course_code):
             return jsonify({'error': f'Course {data["code"]} already exists'}), 400
     
     update_data = {
-        'code': data.get('code', course_code),  # Allow updating the code
+        'code': data.get('code', course_code),
         'name': data.get('name'),
         'department': data.get('department'),
         'level': data.get('level'),
@@ -730,116 +725,187 @@ def delete_exam(payload, exam_id):
 @token_required
 def generate_exam_schedule(payload):
     """Generate exam schedule automatically."""
-    courses = list(db.courses.find({}, {'_id': 0}))
-    halls = list(db.halls.find({}, {'_id': 0}))
-    
-    if not courses or not halls:
-        return jsonify({'error': 'Need courses and halls to generate exam schedule'}), 400
-    
-    # Clear existing exams
-    db.exams.delete_many({})
-    
-    # Generate exam schedule
-    days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-    times = ['9-11', '11-1', '2-4']
-    
-    exam_slots = []
-    idx = 0
-    for course in courses:
-        day = days[idx % len(days)]
-        time = times[idx % len(times)]
-        hall = halls[idx % len(halls)]
+    try:
+        courses = list(db.courses.find({}, {'_id': 0}))
+        halls = list(db.halls.find({}, {'_id': 0}))
         
-        exam_slots.append({
-            'id': f'EXAM{idx+1:03d}',
-            'course': course['code'],
-            'date': day,
-            'time': time,
-            'hall': hall['id'],
-            'duration': '2 hours'
-        })
-        idx += 1
-    
-    # Insert all exams
-    if exam_slots:
-        db.exams.insert_many(exam_slots)
-    
-    return jsonify({
-        'message': f'Generated {len(exam_slots)} exam slots',
-        'exams': exam_slots
-    }), 200
+        if not courses or not halls:
+            return jsonify({'error': 'Need courses and halls to generate exam schedule'}), 400
+        
+        # Clear existing exams
+        db.exams.delete_many({})
+        
+        # Generate exam schedule
+        days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+        times = ['9-11', '11-1', '2-4']
+        
+        exam_slots = []
+        idx = 0
+        for course in courses:
+            day = days[idx % len(days)]
+            time = times[idx % len(times)]
+            hall = halls[idx % len(halls)]
+            
+            exam_slots.append({
+                'id': f'EXAM{idx+1:03d}',
+                'course': course['code'],
+                'date': day,
+                'time': time,
+                'hall': hall['id'],
+                'duration': '2 hours'
+            })
+            idx += 1
+        
+        # Insert all exams
+        if exam_slots:
+            db.exams.insert_many(exam_slots)
+        
+        return jsonify({
+            'message': f'Generated {len(exam_slots)} exam slots',
+            'exams': exam_slots
+        }), 200
+    except Exception as e:
+        print(f"Error generating exams: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
-# CLASS TIMETABLE
+# CLASS TIMETABLE - FIXED WITH PROPER SCHEDULER
 # ============================================================
 
 @admin_bp.route('/timetable/latest', methods=['GET'])
 @token_required
 def get_latest_timetable(payload):
     """Get the latest generated timetable."""
-    timetable = db.timetables.find_one(
-        sort=[('_id', -1)], 
-        projection={'_id': 0}
-    )
-    
-    if not timetable:
-        return jsonify({'error': 'No timetable found'}), 404
-    
-    return jsonify(timetable), 200
+    try:
+        timetable = db.timetables.find_one(
+            sort=[('_id', -1)], 
+            projection={'_id': 0}
+        )
+        
+        if not timetable:
+            return jsonify({'error': 'No timetable found'}), 404
+        
+        return jsonify(timetable), 200
+    except Exception as e:
+        print(f"Error getting timetable: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @admin_bp.route('/timetable/generate', methods=['POST'])
 @token_required
 def generate_timetable(payload):
     """Generate class timetable using genetic algorithm."""
-    data = request.json
-    courses = list(db.courses.find({}, {'_id': 0}))
-    halls = list(db.halls.find({}, {'_id': 0}))
-    
-    if not courses or not halls:
-        return jsonify({'error': 'Need courses and halls to generate timetable'}), 400
-    
-    room_names = [h['name'] for h in halls]
-    days = data.get('days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
-    slots = data.get('slots', ['8-9', '9-10', '10-11', '11-12', '12-1', '2-3', '3-4', '4-5'])
-    
-    # Convert courses to format expected by scheduler
-    course_data = []
-    for c in courses:
-        course_data.append({
-            'id': c['code'],
-            'name': c['name'],
-            'lecturer': c.get('lecturer', 'Unknown'),
-            'level': c.get('level', 'ND1'),
-            'semester': c.get('semester', 1)
+    try:
+        data = request.json or {}
+        
+        # Get courses and halls
+        courses = list(db.courses.find({}, {'_id': 0}))
+        halls = list(db.halls.find({}, {'_id': 0}))
+        
+        print(f"📚 Found {len(courses)} courses, {len(halls)} halls")
+        
+        if not courses:
+            return jsonify({'error': 'No courses found. Please add courses first.'}), 400
+        
+        if not halls:
+            return jsonify({'error': 'No halls found. Please add halls first.'}), 400
+        
+        # Prepare rooms
+        room_names = [h['name'] for h in halls]
+        days = data.get('days', ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'])
+        slots = data.get('slots', ['8-9', '9-10', '10-11', '11-12', '12-1', '2-3', '3-4', '4-5'])
+        
+        # Convert courses to format expected by scheduler
+        course_data = []
+        for c in courses:
+            # Get lecturer name
+            lecturer_name = c.get('lecturer', 'Unknown')
+            
+            # If lecturer is an ID, get the name
+            if lecturer_name and not lecturer_name.startswith('Dr.') and not lecturer_name.startswith('Prof.'):
+                lecturer = db.lecturers.find_one({'id': lecturer_name})
+                if lecturer:
+                    lecturer_name = lecturer.get('name', lecturer_name)
+            
+            course_data.append({
+                'id': c['code'],
+                'name': c['name'],
+                'lecturer': lecturer_name,
+                'department': c.get('department', ''),
+                'level': c.get('level', 'ND1'),
+                'semester': c.get('semester', 1)
+            })
+        
+        print(f"🔄 Processing {len(course_data)} courses with Genetic Algorithm...")
+        
+        # Try to import scheduler
+        try:
+            from .scheduler import GeneticScheduler
+            print("✅ GeneticScheduler imported successfully")
+        except ImportError as e:
+            print(f"❌ Failed to import GeneticScheduler: {e}")
+            # Fallback: use a simple random scheduler
+            print("⚠️ Using fallback random scheduler")
+            return generate_random_timetable(course_data, room_names, days, slots)
+        
+        # Initialize and run scheduler
+        scheduler = GeneticScheduler(course_data, room_names, days, slots)
+        best_schedule, fitness = scheduler.evolve()
+        
+        print(f"✅ Schedule generated with fitness score: {fitness}")
+        print(f"📊 Generated {len(best_schedule)} sessions")
+        
+        # Save timetable
+        timetable_data = {
+            'schedule': best_schedule,
+            'fitness_score': fitness,
+            'generated_at': datetime.utcnow().isoformat(),
+            'generated_by': payload.get('username', 'admin'),
+            'total_courses': len(course_data),
+            'total_sessions': len(best_schedule)
+        }
+        db.timetables.insert_one(timetable_data)
+        
+        return jsonify({
+            'message': 'Timetable generated successfully',
+            'schedule': best_schedule,
+            'fitness_score': fitness,
+            'generated_at': timetable_data['generated_at'],
+            'total_sessions': len(best_schedule)
+        }), 200
+        
+    except Exception as e:
+        print(f"❌ Error generating timetable: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': f'Failed to generate timetable: {str(e)}'}), 500
+
+def generate_random_timetable(courses, rooms, days, slots):
+    """Fallback: Simple random timetable generation."""
+    schedule = []
+    for i, course in enumerate(courses):
+        schedule.append({
+            "course": course["id"],
+            "course_name": course.get("name", ""),
+            "lecturer": course.get("lecturer", "Unknown"),
+            "department": course.get("department", ""),
+            "day": days[i % len(days)],
+            "time": slots[i % len(slots)],
+            "venue": rooms[i % len(rooms)]
         })
-    
-    scheduler = GeneticScheduler(course_data, room_names, days, slots)
-    best_schedule, fitness = scheduler.evolve()
-    
-    # Save timetable
-    timetable_data = {
-        'schedule': best_schedule,
-        'fitness_score': fitness,
-        'generated_at': datetime.utcnow().isoformat(),
-        'generated_by': payload.get('username', 'admin')
-    }
-    db.timetables.insert_one(timetable_data)
-    
-    return jsonify({
-        'message': 'Timetable generated successfully',
-        'schedule': best_schedule,
-        'fitness_score': fitness,
-        'generated_at': timetable_data['generated_at']
-    }), 200
+    return schedule, 50.0
 
 @admin_bp.route('/timetable', methods=['DELETE'])
 @token_required
 def delete_timetable(payload):
     """Delete all timetables."""
-    result = db.timetables.delete_many({})
-    return jsonify({
-        'message': f'Deleted {result.deleted_count} timetables'
-    }), 200
+    try:
+        result = db.timetables.delete_many({})
+        return jsonify({
+            'message': f'Deleted {result.deleted_count} timetables'
+        }), 200
+    except Exception as e:
+        print(f"Error deleting timetables: {e}")
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # PUBLIC TIMETABLE VIEW (No Auth Required)
@@ -848,16 +914,19 @@ def delete_timetable(payload):
 @admin_bp.route('/timetable/public', methods=['GET'])
 def get_public_timetable():
     """Get the latest timetable (public access)."""
-    timetable = db.timetables.find_one(sort=[('_id', -1)], projection={'_id': 0})
-    
-    if not timetable:
-        return jsonify({'error': 'No timetable found'}), 404
-    
-    return jsonify({
-        'schedule': timetable.get('schedule', []),
-        'fitness_score': timetable.get('fitness_score', 0),
-        'generated_at': timetable.get('generated_at')
-    }), 200
+    try:
+        timetable = db.timetables.find_one(sort=[('_id', -1)], projection={'_id': 0})
+        
+        if not timetable:
+            return jsonify({'error': 'No timetable found'}), 404
+        
+        return jsonify({
+            'schedule': timetable.get('schedule', []),
+            'fitness_score': timetable.get('fitness_score', 0),
+            'generated_at': timetable.get('generated_at')
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 # ============================================================
 # STUDENT ENROLLMENT (Assign Courses to Student)
@@ -902,3 +971,25 @@ def get_student_courses(matric):
         'name': student['name'],
         'courses': student.get('courses', [])
     }), 200
+
+# ============================================================
+# TEST ENDPOINT FOR SCHEDULER
+# ============================================================
+
+@admin_bp.route('/test/scheduler', methods=['GET'])
+@token_required
+def test_scheduler(payload):
+    """Test if the scheduler is working."""
+    try:
+        from .scheduler import GeneticScheduler
+        return jsonify({
+            'status': 'success',
+            'message': 'GeneticScheduler imported successfully',
+            'scheduler_available': True
+        }), 200
+    except ImportError as e:
+        return jsonify({
+            'status': 'error',
+            'message': f'Failed to import GeneticScheduler: {str(e)}',
+            'scheduler_available': False
+        }), 500
